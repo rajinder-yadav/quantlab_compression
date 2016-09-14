@@ -17,34 +17,36 @@ public:
    BitBuffer()
       : mode{WRITE_MODE}
       , buffer{}
-      , buffer_size( 32 )
+      , buffer_size( BUFFER_CAPACITY )
    {
    }
 
    /**
     * Prepare buffer to be written to (default).
     * In write mode buffer_size denotes space left to write into.
+    * (!) Avoid making use of this call unless you understand what you're doing!
     */
    void SetWriteMode()
    {
       mode = WRITE_MODE;
 
-      if ( buffer != 0 && buffer_size == 32 )
+      if ( buffer != 0 && buffer_size == BUFFER_CAPACITY )
       {
          packet.push_back( buffer );
          buffer = 0;
-         buffer_size = 32;
+         buffer_size = BUFFER_CAPACITY;
       }
       else
       {
-         buffer_size = 32 - buffer_size;
+         buffer_size = BUFFER_CAPACITY - buffer_size;
          buffer = buffer << buffer_size;
       }
    }
 
    /**
     * Prepare buffer to be read from.
-    * In read more buffer_size denotes size of data remaining.
+    * In read mode buffer_size denotes size of data remaining.
+    * (!) Buffer must have been flushed before this call. It is an error not to do so first.
     */
    void SetReadMode()
    {
@@ -56,13 +58,13 @@ public:
       packet.pop_back();
 
       buffer = buffer >> buffer_size;
-      buffer_size = 32 - buffer_size;
+      buffer_size = BUFFER_CAPACITY - buffer_size;
 
       if ( buffer_size == 0 )
       {
          buffer = packet.back();
          packet.pop_back();
-         buffer_size = 32;
+         buffer_size = BUFFER_CAPACITY;
       }
    }
 
@@ -89,17 +91,17 @@ public:
     *          Packed value will be zero bit padded at msb.
     *          1111 + 1bit pad -> [0|1|1|1|1] 5bits
     */
-   Status pack32( const uint32_t val, const size_ft blocks )
+   Status pack32( const buffer_ft val, const size_ft blocks )
    {
       // Error to write into a full buffer.
-      assert( 0 < buffer_size && buffer_size <= 32 );
+      assert( 0 < buffer_size && buffer_size <= BUFFER_CAPACITY );
       // Make sure in correct mode.
       assert( mode == WRITE_MODE );
 
       size_ft bits = blocks;
 
-      // Invalid combination of value + blocks + pad
-      assert( bits <= 64 );
+      // Validate combination of value + blocks
+      assert( bits <= 2 * BUFFER_CAPACITY );
 
       if ( bits <= buffer_size )
       {
@@ -120,11 +122,14 @@ public:
       }
       else
       {
+         // Spill & merge, buffer is now full.
          buffer |= val >> bits;
       }
 
+      // Pick up the spill
       buffer_ft mask =  uint32_t( pow( 2, bits ) ) - 1;
       buffer_size = 0;
+      // The spill and its bit count.
       return Status( true, bits, val & mask );
    }
 
@@ -152,7 +157,7 @@ public:
     *  Buffer =>  [datat|......]  => [......|data]
     *               msb | lsb          msb  |lsb
     */
-   Status unpack32( uint32_t & val, const size_ft bitsize )
+   Status unpack32( buffer_ft & val, const size_ft bitsize )
    {
       // Error to read empty buffer.
       assert( 0 < buffer_size );
@@ -169,10 +174,12 @@ public:
          return Status( false, bitsize, val );
       }
 
+      // Data cleared out of buffer, buffer is empty.
       bits -= buffer_size;
       val = buffer;
       buffer_size = 0;
       buffer = 0;
+      // Partial value along with bits remaining to be read once buffer is set with next data.
       return Status( true, bits, val );
    }
 
@@ -190,7 +197,7 @@ public:
     *
     * @return - The number of bits taken up by the value.
     */
-   uint32_t Write( uint32_t val, const size_ft blocks )
+   uint32_t Write( buffer_ft val, const size_ft blocks )
    {
       auto rv = pack32( val, blocks );
 
@@ -198,14 +205,15 @@ public:
       {
          packet.push_back( buffer );
          buffer = 0;
-         buffer_size = 32;
+         buffer_size = BUFFER_CAPACITY;
          pack32( rv.val, rv.bits );
       }
       else if ( buffer_size == 0 )
       {
+         // Buffer is full and needs to be written out to the packet.
          packet.push_back( buffer );
          buffer = 0;
-         buffer_size = 32;
+         buffer_size = BUFFER_CAPACITY;
       }
 
       return blocks;
@@ -231,7 +239,7 @@ public:
          }
 
          buffer = packet.back();
-         buffer_size = 32;
+         buffer_size = BUFFER_CAPACITY;
          packet.pop_back();
          uint32_t tmp;
          unpack32( tmp, status.bits );
@@ -253,7 +261,7 @@ public:
       // We will need this when we start to read and have to prepare the buffer for the first time!
       packet.push_back( buffer_size );
       buffer = 0;
-      buffer_size = 32;
+      buffer_size = BUFFER_CAPACITY;
    }
 
 };
