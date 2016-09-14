@@ -3,7 +3,67 @@
 
 class BatBuffer : public BitBuffer
 {
+   SymbolTable table;
 public:
+   enum BAT { BID = 0x0, ASK = 0x1, TRADE = 0x2 };
+
+   std::vector<std::string> Table()
+   {
+      return table.Table();
+   }
+
+   // Interface method
+   void Compress( MarketData md, bool eof )
+   {
+      if ( !eof )
+      {
+         ticker_ft index = table.Add( md.ticker );
+
+         uint32_t s1 = WriteTicker( index );            // index
+         uint32_t s2 = WriteExchange( static_cast<exchange_ft>( md.exchange ) );  // ex
+
+         side_ft side;
+
+         switch ( md.side )
+         {
+         case 'B':
+            side = BAT::BID;
+            break;
+
+         case 'A':
+            side = BAT::ASK;
+            break;
+
+         case 'T':
+            side = BAT::TRADE;
+            break;
+
+         default:
+            assert( false );
+         }
+
+         uint32_t s3 = WriteSide( side );               // side B,A,T
+         uint32_t s4 = WriteCondition( static_cast<condition_ft>( md.condition ) ); // condition
+         uint32_t s5 = WriteTime( static_cast<time_ft>( md.time ) );          // time
+         uint32_t s6 = WriteTime( static_cast<time_ft>( md.reptime ) );       // time-report
+         uint32_t s7 = WritePrice( md.price );          // price
+         uint32_t s8 = WriteShares( static_cast<share_ft>( md.size ) );        // size
+
+         cout << index << "  "
+              << md.ticker << ","
+              << md.exchange << ","
+              << int( side ) << ","
+              << md.condition << ","
+              << md.time << ","
+              << md.reptime << ","
+              << md.price << ","
+              << md.size << endl;         
+      }
+      else
+      {
+         Flush();
+      }
+   }
 
    size_ft WriteTicker( const ticker_ft index )
    {
@@ -185,7 +245,7 @@ public:
       {
          for ( buffer_ft v : packet )
          {
-            f.write( reinterpret_cast<char*>(&v), sizeof( buffer_ft ) );
+            f.write( reinterpret_cast<char *>( &v ), sizeof( buffer_ft ) );
          }
       }
    }
@@ -201,7 +261,7 @@ public:
 
          while ( true )
          {
-            f.read( reinterpret_cast<char*>(&buf), sizeof( buffer_ft ) );
+            f.read( reinterpret_cast<char *>( &buf ), sizeof( buffer_ft ) );
 
             if ( !f.good() )
             {
@@ -210,8 +270,19 @@ public:
 
             packet.push_back( buf );
          } // while
+
          SetReadMode();
       }
+   }
+
+   void SaveTable( const std::string & filename )
+   {
+      table.SaveTable( filename );
+   }
+
+   void LoadTable( const std::string & filename )
+   {
+      table.LoadTable( filename );
    }
 
 };

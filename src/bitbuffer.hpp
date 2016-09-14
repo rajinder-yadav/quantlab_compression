@@ -3,9 +3,9 @@
 
 //#include <cassert>
 
-class BitBuffer
+class BitBuffer : public IProcessMarketData
 {
-public:   
+public:
    enum mode_e { WRITE_MODE, READ_MODE };
 
    std::vector<buffer_ft> packet;
@@ -18,6 +18,27 @@ public:
       : mode{WRITE_MODE}
       , buffer{}
       , buffer_size( BUFFER_CAPACITY )
+   {
+   }
+
+   // Interface method
+   void Compress( MarketData md, bool eof )
+   {
+   }
+   // Interface method
+   void Save( const std::string & filename )
+   {
+   }
+   // Interface method
+   void Load( const std::string & filename )
+   {
+   }
+   // Interface method
+   void SaveTable( const std::string & filename )
+   {
+   }
+   // Interface method
+   void LoadTable( const std::string & filename )
    {
    }
 
@@ -244,6 +265,13 @@ public:
          uint32_t tmp;
          unpack32( tmp, status.bits );
          val |= tmp << size;
+      }
+
+      if ( buffer_size == 0 && packet.size() > 0 )
+      {
+         buffer = packet.back();
+         buffer_size = BUFFER_CAPACITY;
+         packet.pop_back();
       }
 
       return ( packet.size() > 0 || buffer_size > 0 );
