@@ -2,7 +2,7 @@
 
 ## Problems Encountered
 
-After having a working implementation I had nagging issues with the sample data (ebat.sip) provided. To check it was the data, I wrote 2 separate methods to parse the CSV tick data and both would core at line 200654.
+After having a working implementation I had nagging issues with the sample data (ebat.zip) provided. To check it was a file corruption, I wrote 2 separate methods to parse the CSV tick data and both would core at line 200654.
 
 Please see test code I used under folder "csv_filechecker".
 
@@ -39,7 +39,7 @@ What I think is going on is that the files provided were created and zipped on a
 
 2. End of line, Windows uses "\r\n" vs Unix newline "\n", will cause diff to fail.
 
-Only after using dos2unix I was able to use the 1st 100,000 line of input from ebat.csv, still cores at same line.
+Only after using dos2unix I was able to use the 1st 100,000 lines from ebat.csv, still cores at same line.
 
 I did the following with the input file to make use some of it:
 
@@ -76,7 +76,7 @@ For configuration, I used constant defined in file fieldsizes.hpp and their type
 
 With the conservative values, the compression ratio is: 1.9263258666505005, almost 50% compression. 
 
-Here is are the files size (below) I used to calculate the ratio.
+Here are the files size (below) I used to calculate the ratio.
 
 ```
 -rw-rw-r-- 1 yadav yadav  4575702 Sep 13 17:41 testdata
@@ -87,28 +87,27 @@ Here is are the files size (below) I used to calculate the ratio.
 
 I took time to think about how to implement a flexible design that with minor changes could be tweaked to get improvements on the compression ratio as well allow for flexibility of code changes.
 
-To compress the ticker which is both both variable in size as well as duplicates will exists in the tick data. I decided to created an index symbol file.
+To compress the ticker which is both variable in size as contains duplicates in the tick data, I decided to use an indexed symbol table.
 
-1. First time symbol is discovered, it's added to SymbolTable and an unique index is generated to be bit packed.
+1. First time symbol is discovered, it's added to SymbolTable and a unique index is generated to be bit packed during compression.
 
 2. Each time an existing symbol is detected, it's previous index values is used and bit packed.
 
-During the uncompress stage Symbols table is used to fetch the ticker (symbol) name.
+During the uncompress stage, Symbols table is used to fetch the ticker (symbol) name.
 
-For field 'side' I was able to use 2 bit to encode the data.
+For field 'side' I was able to use 2 bits to encode the data.
 
 * bit 0x00 - (B)id
 * bit 0x01 - (A)sk
 * bit 0x02 - (T)rade
 
-3. I may have been able to reduce the size for field 'reptime' by saving it's delta, but played it safe!
+3. I may have been able to reduce the size for field 'reptime' by saving it's delta from the 'time' field, but played it safe to just write it out.
 
-  1. Initially I thought to use a std::bitset but it proved limited is API support. 
+  1. Initially I thought to use a std::bitset but it proved limited is API support.
 
-  2. So I thought maybe I will used a Packet with a fixed bit size, but then there would be wasted unused bits.
+  2. So I thought maybe I will use a Packet of a fixed bit size, but then there would be wasted unused bits.
 
   3. Next I considered using a class with bit fields to save the data.
-
 
 ```C++
 // Size of class is 1 8bits, both a1 and a2 saved to same char field!
@@ -121,19 +120,18 @@ class A {
 ### Bit Buffer
 The design I decided with was to code up a BitBuffer that works like a queue. You push values with its bit size and the BitBuffer class takes care up packing the data. This seem to be the best and most flexible solution considered above.
 
-
- For time fields, I decided against packing a double value into a 32bit aligned buffer. I was not sure if data loss would occur converting between a double and two 32bit words. This is one area of improvement that could be made with more research and testing. So I opted for a conservative approach of using a string of max size 8 characters.
+ For both time fields, I decided against packing a double value into a 32bit aligned buffer. I was not sure if data loss would occur converting between a double and two 32bit words. This is one area of improvement that could be made with more research and testing. So I opted for a conservative approach of using a string of max size 8 characters.
 
 ## Thoughts
 
-My code could break due to the assumption I've made about field bit sizes to go with. However I've kept the design flexible by allowing the field bit size to be configurable and got with BitBuffer which provides a dense packing of bits.
+My code could break due to the assumption I've made about field bit sizes to go with. However I've kept the design flexible by allowing the field bit size to be configurable and go with BitBuffer which provides a dense packing of bits (no empty padding needed for alignment, etc.).
 
-I wasn't able to test with the entire input test file due to odd corruption, so there might be possible errors due to field sizing that I did not catch. I'm very confident I would be able to tackle these errors in a short amount of time. I also made use of defensive programming and added assert which would be tripped in debug mode, this is both good for the API user as well as implementor.
+I wasn't able to test with the entire input test file (ebat.csv) due to odd corruption, so there might be possible errors due to field sizing that I did not catch. I'm very confident I would be able to tackle these errors in a short amount of time. I also made use of defensive programming and added assert which would be tripped in debug mode, this is both good for the API User as well as implementor.
 
-## Build The Project
-I used CMake to build me project which is a cross platform makefile generator, site: https://cmake.org/
+## Building The Project
+I used CMake to build my project which is a cross platform makefile generator, site: https://cmake.org/
 
-I will assume you're working on Linux (use similar commands on Windows). Also I've provided a command to generate me NMake file for windows, but unable to test it.
+I will assume you're working on Linux (use similar commands on Windows). Also I've provided a command to generate a NMake makefile for Windows, but unable to test it.
 
 ```
 git clone https://github.com/rajinder-yadav/quantlab_compression.git
@@ -146,7 +144,7 @@ cmake -G "Unix Makefiles" -D CMAKE_BUILD_TYPE="Release" ../src
 make
 ```
 
-This should start the build to generate a release build of program "./quantlab_compression".
+This should start the build to create a release build of program "quantlab_compression".
 
 On Windows change the above cmake command to:
 ```
