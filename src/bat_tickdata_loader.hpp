@@ -16,9 +16,12 @@ public:
                          bool & err )
    {
       BatBuffer buffer;
+      buffer.OpenStream( outfile );
+
       std::ifstream in_fs( infile );
 
       cout << "Compressing file: " << infile << " ... ";
+
       if ( !in_fs.is_open() )
       {
          cerr << "Error: File does not exist\n";
@@ -35,11 +38,12 @@ public:
          cout << "Lines processed: " << lines_read << endl;
          MarketData md = DataParser::GetMarketData( s, err );
 
-         if(err) {
+         if ( err )
+         {
             cerr << "Aboting! Error with input line: " << lines_read << endl;
-            exit(1);
+            exit( 1 );
          }
-  
+
 
          // Ignore invalid input data
          if ( !err )
@@ -49,18 +53,21 @@ public:
          else
          {
             cerr << "Compression failed!\n";
-            exit(1);
+            exit( 1 );
+         }
+
+         if ( lines_read > 0 && lines_read % 10 == 0 )
+         {
+            buffer.WriteStream();
          }
       } // while
 
       buffer.Compress( MarketData{}, true );
-
-      err = !in_fs.eof();
+      buffer.CloseStream( err );
       in_fs.close();
 
       std::string symtable( outfile + ".table" );
       buffer.SaveTable( symtable );
-      buffer.Save( outfile );
       cout << "Compressed successfully!\n";
       cout << "Filename: " << outfile << "\n\n";
    }

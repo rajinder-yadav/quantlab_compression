@@ -10,6 +10,8 @@
 class BatBuffer : public BitBuffer
 {
    SymbolTable table;
+   std::ofstream fstreamer;
+
 public:
    enum BAT { BID = 0x0, ASK = 0x1, TRADE = 0x2 };
 
@@ -243,6 +245,38 @@ public:
       }
 
       return more;
+   }
+
+   void OpenStream( const std::string & filename )
+   {
+      fstreamer.open( filename, std::ios::binary );
+
+      if ( !fstreamer.good() )
+      {
+         cerr << "Aborting! Unable to open file for streaming.\n";
+         assert(false);
+         exit( 1 );
+      }
+   }
+
+   void WriteStream()
+   {
+      if ( fstreamer.good() )
+      {
+         for ( buffer_ft v : packet )
+         {
+            fstreamer.write( reinterpret_cast<char *>( &v ), sizeof( buffer_ft ) );
+         }
+
+         packet.clear();
+      }
+   }
+
+   void CloseStream( bool & error )
+   {
+      WriteStream();
+      error = !fstreamer.good();
+      fstreamer.close();
    }
 
    void Save( const std::string & filename )
