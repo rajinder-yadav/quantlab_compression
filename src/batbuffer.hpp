@@ -7,7 +7,7 @@ class BatBuffer : public BitBuffer
 public:
    enum BAT { BID = 0x0, ASK = 0x1, TRADE = 0x2 };
 
-   std::vector<std::string> Table()
+   std::deque<std::string> Table()
    {
       return table.Table();
    }
@@ -49,6 +49,7 @@ public:
          uint32_t s7 = WritePrice( md.price );          // price
          uint32_t s8 = WriteShares( static_cast<share_ft>( md.size ) );        // size
 
+         // Debug logging
          cout << index << "  "
               << md.ticker << ","
               << md.exchange << ","
@@ -57,7 +58,7 @@ public:
               << md.time << ","
               << md.reptime << ","
               << md.price << ","
-              << md.size << endl;         
+              << md.size << endl;
       }
       else
       {
@@ -179,11 +180,11 @@ public:
       bool more = false;
       buffer_ft tmp;
 
-      more = Read( tmp, 32, error1 );
-      assert( more );
-      val = static_cast<buffer_ft>( tmp );
       more = Read( tmp, 5, error2 );
+      assert( more );
       time_ft hi = static_cast<buffer_ft>( tmp );
+      more = Read( tmp, 32, error1 );
+      val = static_cast<buffer_ft>( tmp );
       val = ( hi << 32 ) | val;
       // error = error1 | error2;
       return more;
@@ -205,7 +206,7 @@ public:
             continue;
          }
 
-         price = static_cast<char>( ch ) + price;
+         price += static_cast<char>( ch );
       }
 
       return more;

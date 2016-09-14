@@ -8,7 +8,7 @@ class BitBuffer : public IProcessMarketData
 public:
    enum mode_e { WRITE_MODE, READ_MODE };
 
-   std::vector<buffer_ft> packet;
+   std::deque<buffer_ft> packet;
    mode_e mode;
    buffer_ft buffer;
    size_ft buffer_size;
@@ -72,6 +72,13 @@ public:
    void SetReadMode()
    {
       mode = READ_MODE;
+      buffer = packet.front();
+      packet.pop_front();
+      buffer_size = BUFFER_CAPACITY;
+
+#if 1
+#else
+      mode = READ_MODE;
       buffer_size = packet.back();
       packet.pop_back();
 
@@ -87,6 +94,8 @@ public:
          packet.pop_back();
          buffer_size = BUFFER_CAPACITY;
       }
+
+#endif
    }
 
    /**
@@ -119,17 +128,16 @@ public:
       // Make sure in correct mode.
       assert( mode == WRITE_MODE );
 
-      size_ft bits = blocks;
+      assert( blocks <= 2 * BUFFER_CAPACITY );
 
-      // Validate combination of value + blocks
-      assert( bits <= 2 * BUFFER_CAPACITY );
+      size_ft bits = blocks;
 
       if ( bits <= buffer_size )
       {
-         // Buffer still has space
+         // Buffer has not overflowed, may be full.
          buffer_size -= bits;
          buffer |= val << buffer_size;
-         return Status( false, bits, 0 );
+         return Status( false, 0, 0 );
       }
 
       // Buffer is full, ready to be written out & cleared.
@@ -189,15 +197,27 @@ public:
 
       if ( bits <= buffer_size )
       {
-         val = buffer & uint32_t( pow( 2, bits ) - 1 );
+         buffer_ft mask = uint32_t( pow( 2, bits ) - 1 );
+         mask = mask << ( 32 - bits );
+         val = ( buffer & mask ) >> ( 32 - bits );
          buffer_size -= bits;
-         buffer = buffer >> bits;
-         return Status( false, bitsize, val );
+
+         // Bug with right shift operator for shift equal to bits of value. 
+         if ( bits == 0 )
+         {
+            buffer = 0;
+         }
+         else
+         {
+            buffer = buffer << bits;
+         }
+
+         return Status( false, 0, 0 );
       }
 
       // Data cleared out of buffer, buffer is empty.
       bits -= buffer_size;
-      val = buffer;
+      val = buffer >> ( 32 - buffer_size );
       buffer_size = 0;
       buffer = 0;
       // Partial value along with bits remaining to be read once buffer is set with next data.
@@ -220,8 +240,17 @@ public:
     */
    uint32_t Write( buffer_ft val, const size_ft blocks )
    {
+      // Buffer is full and needs to be written out to the packet.
+      if ( buffer_size == 0 )
+      {
+         packet.push_back( buffer );
+         buffer = 0;
+         buffer_size = BUFFER_CAPACITY;
+      }
+
       auto rv = pack32( val, blocks );
 
+      // Save full buffer to packet, clear out and write out spilled data to buffer.
       if ( rv.overflow )
       {
          packet.push_back( buffer );
@@ -229,9 +258,9 @@ public:
          buffer_size = BUFFER_CAPACITY;
          pack32( rv.val, rv.bits );
       }
-      else if ( buffer_size == 0 )
+
+      if ( buffer_size == 0 )
       {
-         // Buffer is full and needs to be written out to the packet.
          packet.push_back( buffer );
          buffer = 0;
          buffer_size = BUFFER_CAPACITY;
@@ -246,35 +275,28 @@ public:
       assert( packet.size() > 0 || buffer_size > 0 );
       assert( mode == READ_MODE );
 
-      size_ft size = buffer_size;
+      if ( buffer_size == 0 )
+      {
+         assert( packet.size() > 0 );
+         buffer = packet.front();
+         packet.pop_front();
+         buffer_size = BUFFER_CAPACITY;
+      }
+
       auto status = unpack32( val, bitsize );
 
       if ( status.overflow )
       {
          assert( packet.size() > 0 );
-
-         if ( packet.size() == 0 )
-         {
-            error = true;
-            return false;
-         }
-
-         buffer = packet.back();
+         buffer = packet.front();
+         packet.pop_front();
          buffer_size = BUFFER_CAPACITY;
-         packet.pop_back();
          uint32_t tmp;
          unpack32( tmp, status.bits );
-         val |= tmp << size;
+         val = ( val << status.bits ) | tmp;
       }
 
-      if ( buffer_size == 0 && packet.size() > 0 )
-      {
-         buffer = packet.back();
-         buffer_size = BUFFER_CAPACITY;
-         packet.pop_back();
-      }
-
-      return ( packet.size() > 0 || buffer_size > 0 );
+      return ( packet.size() > 0 || buffer != 0 );
    }
 
    /**
@@ -284,10 +306,15 @@ public:
     */
    void Flush()
    {
+      if ( buffer_size == 32 )
+      {
+         return;
+      }
+
       packet.push_back( buffer );
 
       // We will need this when we start to read and have to prepare the buffer for the first time!
-      packet.push_back( buffer_size );
+      //TODOpacket.push_back( buffer_size );
       buffer = 0;
       buffer_size = BUFFER_CAPACITY;
    }
