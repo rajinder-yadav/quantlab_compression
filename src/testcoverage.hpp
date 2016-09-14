@@ -3,10 +3,10 @@ struct Runner : public TestRunner
 {
    void RunTests()
    {
-    std::string test;
+      std::string test;
 
       /**
-       * Test class SymbolTable.
+       * Test class SymbolTable
        */
       test = "Create table verify index order";
       {
@@ -19,12 +19,12 @@ struct Runner : public TestRunner
 
          auto lookup = t.Table();
 
-         bool result = lookup.size() == 5
-                       && lookup[0] == "max"
-                       && lookup[1] == "top"
-                       && lookup[2] == "garden"
-                       && lookup[3] == "glass"
-                       && lookup[4] == "door";
+         bool result = lookup.size() == 5  
+         && lookup[0] == "max"
+         && lookup[1] == "top"
+         && lookup[2] == "garden"
+         && lookup[3] == "glass"
+         && lookup[4] == "door";
          check( result, test );
       }
       test = "Create table with duplicate entries, verify index order";
@@ -43,12 +43,12 @@ struct Runner : public TestRunner
 
          auto lookup = t.Table();
 
-         bool result = lookup.size() == 5
-                       && lookup[0] == "max"
-                       && lookup[1] == "top"
-                       && lookup[2] == "garden"
-                       && lookup[3] == "glass"
-                       && lookup[4] == "door";
+         bool result = lookup.size() == 5 
+         && lookup[0] == "max"
+         && lookup[1] == "top"
+         && lookup[2] == "garden"
+         && lookup[3] == "glass"
+         && lookup[4] == "door";
          check( result, test );
       }
       test = "Create table different order, verify index order";
@@ -58,28 +58,28 @@ struct Runner : public TestRunner
          t.Add( "glass" );
          t.Add( "top" );
          t.Add( "garden" );
-         t.Add( "max" );
+         t.Add( "max" );         
          t.Add( "door" );
 
          auto lookup = t.Table();
 
-         bool result = lookup.size() == 5
-                       && lookup[0] == "glass"
-                       && lookup[1] == "top"
-                       && lookup[2] == "garden"
-                       && lookup[3] == "max"
-                       && lookup[4] == "door";
+         bool result = lookup.size() == 5  
+         && lookup[0] == "glass"
+         && lookup[1] == "top"
+         && lookup[2] == "garden"
+         && lookup[3] == "max"
+         && lookup[4] == "door";
          check( result, test );
       }
-
-    /**
+      
+      /**
        * Test class BitBuffer
        */
       test = "Packing zero value (1 bit)";
       {
          BitBuffer buf;
          uint32_t val = 0;
-         auto b = buf.pack32( val, 0, 1 ); // 1bit including 1bit padding
+         auto b = buf.pack32( val, 1 ); // 1bit including 1bit padding
          bool result = buf.buffer == 0
                        && !b.overflow
                        && b.bits == 1
@@ -87,12 +87,11 @@ struct Runner : public TestRunner
 
          check( result, test );
       }
-      // 2013265920 (0b1111000000000000000000000000000) 31bits
       test = "Packing value 15 with 1bit pad, testing pad bit is on msb end of value";
       {
          BitBuffer buf;
-         uint32_t val = 15;                // 4bits
-         auto b = buf.pack32( val, 0, 1 ); // 5bits including 1bit padding
+         uint32_t val = 15;             // 4bits
+         auto b = buf.pack32( val, 5 ); // 5bits including 1bit padding
          bool result = buf.buffer == 2013265920
                        && !b.overflow
                        && b.bits == 5  // How many bits were packed
@@ -102,8 +101,8 @@ struct Runner : public TestRunner
       test = "Packing value 37 < 32bits";
       {
          BitBuffer buf;
-         uint32_t val = 37;
-         auto b = buf.pack32( val, 0, 0 ); // 6bits
+         uint32_t val = 37;             // 6bits
+         auto b = buf.pack32( val, 0 ); // 6bits
          bool result = buf.buffer == 2483027968
                        && !b.overflow
                        && b.bits == 6
@@ -113,8 +112,8 @@ struct Runner : public TestRunner
       test = "Packing value 37 < 32bits, fixed bits 7";
       {
          BitBuffer buf;
-         uint32_t val = 37;
-         auto b = buf.pack32( val, 7, 0 );  // 7bit including 1bit padding
+         uint32_t val = 37;              // 6bits
+         auto b = buf.pack32( val, 7 );  // 7bits including 1bit padding
          bool result = buf.buffer == 37 << (32-7)
                        && !b.overflow
                        && b.bits == 7
@@ -124,8 +123,8 @@ struct Runner : public TestRunner
       test = "Packing value 2^32 == 32bits";
       {
          BitBuffer buf;
-         uint32_t val = pow(2,32) - 1;
-         auto b = buf.pack32( val, 0, 0 );  // 32bits
+         uint32_t val = pow(2,32) - 1;   // 32bits
+         auto b = buf.pack32( val, 0 );  // 32bits
          bool result = buf.buffer == val
                        && !b.overflow
                        && b.bits == 32
@@ -135,62 +134,59 @@ struct Runner : public TestRunner
       test = "Packing value 2^32 == 32bits, fixed bits 32";
       {
          BitBuffer buf;
-         uint32_t val = pow(2,32) - 1;
-         auto b = buf.pack32( val, 32, 0 );  // 32bits
+         uint32_t val = pow(2,32) - 1;    // 32bits
+         auto b = buf.pack32( val, 32 );  // 32bits
          bool result = buf.buffer == val
                        && !b.overflow
                        && b.bits == 32
                        && b.val == 0;
          check( result, test );
       }      
-      test = "Packing value 2^32-1 with padding of 5 bits";
+      test = "Packing value 4294945450 with padding of 5 bits";
       {
          // 4294945450 (0b11111111111111111010101010101010) 32bits
          BitBuffer buf;
-         uint32_t pad = 5;
-         uint32_t val = 4294945450;
-         auto b = buf.pack32( val, 0, pad );  // 37bits including 5bits padding
+         uint32_t val = 4294945450;       // 32bits
+         auto b = buf.pack32( val, 37 );  // 37bits including 5bits padding
 
-         uint32_t data1 = val >> pad;
-         uint32_t data2 = val & uint32_t(pow( 2, pad ) - 1);
+         uint32_t data1 = val >> 5;
+         uint32_t data2 = val & uint32_t(pow( 2, 5 ) - 1);
 
          bool result = buf.buffer == data1
                        && b.overflow
-                       && b.bits == pad
+                       && b.bits == 5
                        && b.val == data2;
          check( result, test );
       }
-      test = "Packing value 2^32-1 with padding of 9 bits";
+      test = "Packing value 4294945450 with padding of 9 bits";
       {
          // 4294945450 (0b11111111111111111010101010101010) 32bits
          BitBuffer buf;
-         uint32_t pad = 9;
-         uint32_t val = 4294945450;
-         auto b = buf.pack32( val, 0, pad );
+         uint32_t val = 4294945450;      // 32bits
+         auto b = buf.pack32( val, 41 ); // 41bits including 9bits padding
 
-         uint32_t data1 = val >> pad;
-         uint32_t data2 = val & uint32_t(pow( 2, pad ) - 1);
+         uint32_t data1 = val >> 9;
+         uint32_t data2 = val & uint32_t(pow( 2, 9 ) - 1);
 
          bool result = buf.buffer == data1
                        && b.overflow
-                       && b.bits == pad
+                       && b.bits == 9
                        && b.val == data2;
          check( result, test );
       }
-      test = "Packing value 2^32-1 with padding of 32 bits";
+      test = "Packing value 4294945450 with padding of 32 bits";
       {
          // 4294945450 (0b11111111111111111010101010101010) 32bits
          BitBuffer buf;
-         uint32_t pad = 32;
-         uint32_t val = 4294945450;
-         auto b = buf.pack32( val, 0, pad );
+         uint32_t val = 4294945450;      // 32bits
+         auto b = buf.pack32( val, 64 ); // 64bits including 9bits padding
 
-         uint32_t data1 = val >> pad;
-         uint32_t data2 = val & uint32_t(pow( 2, pad ) - 1);
+         uint32_t data1 = 0;
+         uint32_t data2 = 4294945450;
 
          bool result = buf.buffer == data1
                        && b.overflow
-                       && b.bits == pad
+                       && b.bits == 32
                        && b.val == data2;
          check( result, test );
       }
@@ -198,10 +194,9 @@ struct Runner : public TestRunner
       {
          // 2863333375 (0b 1010 1010 1010 1010 1111 1111 1111 1111) 32bits
          BitBuffer buf;
-         uint32_t pad = 0;
          uint32_t val = 2863333375;
-         auto b1 = buf.pack32( 6577, 0, pad ); // 13bits
-         auto b2 = buf.pack32( val, 0, pad );  // 32bits
+         auto b1 = buf.pack32( 6577, 0 ); // 13bits
+         auto b2 = buf.pack32( val, 0 );  // 32bits
 
          uint32_t data1 = 6577 << (32-13);
          data1 = data1 | (val >> 13);
@@ -213,14 +208,13 @@ struct Runner : public TestRunner
                        && b2.val == data2;
          check( result, test );
       }
-      test = "Packing value 6577 (15bit), 2^32-1 with padding of 32 bits";
+      test = "Packing value 6577 (15bit), 2863333375 with padding of 32 bits";
       {
          // 2863333375 (0b 1010 1010 1010 1010 1111 1111 1111 1111) 32bits
          BitBuffer buf;
-         uint32_t pad = 0;
          uint32_t val = 2863333375;
-         auto b1 = buf.pack32( 6577, 15, pad ); // 15bits
-         auto b2 = buf.pack32( val, 0, pad );   // 32bits
+         auto b1 = buf.pack32( 6577, 15 ); // 15bits
+         auto b2 = buf.pack32( val, 0 );   // 32bits
 
          uint32_t data1 = 6577 << (32-15);
          data1 = data1 | (val >> 15);
@@ -232,14 +226,13 @@ struct Runner : public TestRunner
                        && b2.val == data2;
          check( result, test );
       }
-      test = "Packing value 442, 2^32-1 with padding of 32 bits";
+      test = "Packing value 442, 2863333375 with padding of 32 bits";
       {
          // 2863333375 (0b 1010 1010 1010 1010 1111 1111 1111 1111) 32bits
          BitBuffer buf;
-         uint32_t pad = 0;
          uint32_t val = 2863333375;
-         auto b1 = buf.pack32( 442, 0, pad );  // 9bits
-         auto b2 = buf.pack32( val, 0, pad );  // 32bits
+         auto b1 = buf.pack32( 442, 0 );  // 9bits
+         auto b2 = buf.pack32( val, 0 );  // 32bits
 
          uint32_t data1 = 442 << (32-9);
          data1 = data1 | (val >> 9);
@@ -251,14 +244,13 @@ struct Runner : public TestRunner
                        && b2.val == data2;
          check( result, test );
       }
-      test = "Packing value 2^26-1, 43(0b1100010) to create a 32bit value";
+      test = "Packing value 61865903, 43(0b1100010) to create a 32bit value";
       {
          // 61865903 (0b11 1010 1111 1111 1111 1010 1111) 26bits
          BitBuffer buf;
-         uint32_t pad = 0;
          uint32_t val = 61865903;
-         auto b1 = buf.pack32( val, 0, pad ); // 26bits
-         auto b2 = buf.pack32( 43, 0, pad );  // 6bits
+         auto b1 = buf.pack32( val, 0 ); // 26bits
+         auto b2 = buf.pack32( 43, 0 );  // 6bits
 
          uint32_t data1 = 61865903 << (32-26);
          data1 = data1 | 43;
@@ -270,14 +262,13 @@ struct Runner : public TestRunner
                        && b2.val == data2;
          check( result, test );
       }
-      test = "Packing value 2^26-1, 98(0b1100010) so that 1 bit of zero value spills-over";
+      test = "Packing value 61865903, 98(0b1100010) so that 1 bit of zero value spills-over";
       {
          // 61865903 (0b11 1010 1111 1111 1111 1010 1111) 26bits
          BitBuffer buf;
-         uint32_t pad = 0;
          uint32_t val = 61865903;
-         auto b1 = buf.pack32( val, 0, pad ); // 26bits
-         auto b2 = buf.pack32( 98, 0, pad );  // 7bits
+         auto b1 = buf.pack32( val, 0 ); // 26bits
+         auto b2 = buf.pack32( 98, 0 );  // 7bits
 
          uint32_t data1 = 61865903 << (32-26);
          data1 = data1 | 98 >> 1;
@@ -289,14 +280,13 @@ struct Runner : public TestRunner
                        && b2.val == data2;
          check( result, test );
       }
-      test = "Packing value 2^26-1, 816(0b1100110000) so that 1 bit of zero value spills-over";
+      test = "Packing value 61865903, 816(0b1100110000) so that 1 bit of zero value spills-over";
       {
          // 61865903 (0b11 1010 1111 1111 1111 1010 1111)
          BitBuffer buf;
-         uint32_t pad = 0;
          uint32_t val = 61865903;
-         auto b1 = buf.pack32( val, 0, pad ); // 26bits
-         auto b2 = buf.pack32( 816, 0, pad ); // 10bits
+         auto b1 = buf.pack32( val, 0 ); // 26bits
+         auto b2 = buf.pack32( 816, 0 ); // 10bits
 
          uint32_t data1 = val << (32-26);
          data1 = data1 | 816 >> (10 - (32-26));
@@ -329,6 +319,6 @@ struct Runner : public TestRunner
          bool result = buf.packet[0] == n
                        && buf.packet[1] == ( 111 & 7 ) << ( 32 - 3 );
          check( result, test );
-      }           
+      }       
    }
 };
