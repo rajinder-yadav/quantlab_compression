@@ -145,6 +145,31 @@ public:
 
    bool Read( uint32_t & val, const int bitsize, bool & error )
    {
+      // Alert caller of potential bug for reading from empty buffer.
+      assert( packet.size() > 0 || buffer_size > 0 );
+      assert( mode == READ_MODE );
+
+      auto status = unpack32( val, bitsize );
+
+      if ( status.overflow )
+      {
+         assert( packet.size() > 0 );
+
+         if ( packet.size() == 0 )
+         {
+            error = true;
+            return false;
+         }
+
+         buffer = packet.back();
+         buffer_size = 32;
+         packet.pop_back();
+         uint32_t tmp;
+         unpack32( tmp, status.bits );
+         val |= tmp << status.bits;
+      }
+
+      return ( packet.size() > 0 || buffer_size > 0 );
    }
 
    /**
