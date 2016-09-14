@@ -49,7 +49,7 @@ public:
          uint32_t s7 = WritePrice( md.price );          // price
          uint32_t s8 = WriteShares( static_cast<share_ft>( md.size ) );        // size
 
-         // Debug logging
+         /* Debug logging
          cout << index << "  "
               << md.ticker << ","
               << md.exchange << ","
@@ -59,6 +59,7 @@ public:
               << md.reptime << ","
               << md.price << ","
               << md.size << endl;
+               */
       }
       else
       {
