@@ -48,16 +48,20 @@ public:
    void SetReadMode()
    {
       mode = READ_MODE;
+      buffer_size = packet.back();
+      packet.pop_back();
 
-      if ( buffer == 0 && buffer_size == 32 && packet.size() > 0 )
+      buffer = packet.back();
+      packet.pop_back();
+
+      buffer = buffer >> buffer_size;
+      buffer_size = 32 - buffer_size;
+
+      if ( buffer_size == 0 )
       {
          buffer = packet.back();
          packet.pop_back();
-      }
-      else
-      {
-         buffer = buffer >> buffer_size;
-         buffer_size = 32 - buffer_size;
+         buffer_size = 32;
       }
    }
 
@@ -91,7 +95,7 @@ public:
       // Make sure in correct mode.
       assert( mode == WRITE_MODE );
 
-      uint32_t bits = blocks > 0 ? blocks : ceil( log2( val ) );
+      uint32_t bits = blocks;
 
       // Invalid combination of value + blocks + pad
       assert( bits <= 64 );
@@ -177,6 +181,7 @@ public:
       assert( packet.size() > 0 || buffer_size > 0 );
       assert( mode == READ_MODE );
 
+      uint32_t size = buffer_size;
       auto status = unpack32( val, bitsize );
 
       if ( status.overflow )
@@ -194,10 +199,44 @@ public:
          packet.pop_back();
          uint32_t tmp;
          unpack32( tmp, status.bits );
-         val |= tmp << status.bits;
+         val |= tmp << size;
       }
 
       return ( packet.size() > 0 || buffer_size > 0 );
+   }
+   std::string ReadString( const int count )
+   {
+      bool error;
+      std::string s;
+      uint32_t ch;
+
+      for ( int i = 0; i < count; ++i )
+      {
+         Read( ch, 8, error );
+         s = char( ch ) + s;
+      }
+
+      return s;
+   }
+
+   bool ReadSize( uint32_t & val )
+   {
+      bool error;
+      Read( val, 14, error );
+      return error;
+   }
+
+   bool ReadTime( uint64_t & val )
+   {
+      bool error;
+      uint32_t tmp;
+
+      Read( tmp, 32, error );
+      val = tmp;
+      Read( tmp, 5, error );
+      uint64_t hi = tmp;
+      val = ( hi << 32 ) | val;
+      return error;
    }
 
    /**
@@ -214,7 +253,7 @@ public:
     *
     * @return - The number of bits taken up by the value.
     */
-   uint32_t Write( uint32_t val, const int blocks = 0 )
+   uint32_t Write( uint32_t val, const int blocks )
    {
       auto rv = pack32( val, blocks );
 
@@ -232,7 +271,23 @@ public:
          buffer_size = 32;
       }
 
-      return uint32_t( ceil( log2( val ) ) );
+      return blocks;
+   }
+
+   uint32_t WriteTime( uint64_t val )
+   {
+      // Mico-sec since midnight (24 hrs = 8.64e+10 = 37bits)
+      uint32_t hi = val >> 32;
+      uint32_t lo = static_cast<uint32_t>( val );
+      Write( hi, 5 );
+      Write( lo, 32 );
+      return 37;
+   }
+   uint32_t WriteSize( uint32_t val )
+   {
+      // Max 10000 (14bits) ???
+      Write( val, 14 );
+      return 14;
    }
 
    /**
@@ -248,25 +303,25 @@ public:
 
       for ( char c : val )
       {
-         bits += Write( uint32_t( c ) );
+         bits += Write( uint32_t( c ), 8 );
       }
 
-      return bits;
+      return bits / 8; // chars
    }
 
    /**
     * Save what's remaining in the buffer to the packet.
     *
-    * This MUST be called to finalize the Write operation.
+    * This MUST be called only once to finalize the Write operation.
     */
    void Flush()
    {
-      if ( buffer_size < 32 )
-      {
-         packet.push_back( buffer );
-         buffer = 0;
-         buffer_size = 32;
-      }
+      packet.push_back( buffer );
+
+      // We will need this when we start to read and have to prepare the buffer for the first time!
+      packet.push_back( buffer_size );
+      buffer = 0;
+      buffer_size = 32;
    }
 
 };
