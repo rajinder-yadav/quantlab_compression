@@ -121,6 +121,26 @@ public:
     */
    Status unpack32( uint32_t & val, const int bitsize )
    {
+      // Error to read empty buffer.
+      assert( 0 < buffer_size );
+      // Make sure in correct mode.
+      assert( mode == READ_MODE );
+
+      uint32_t bits = bitsize;
+
+      if ( bits <= buffer_size )
+      {
+         val = buffer & uint32_t( pow( 2, bits ) - 1 );
+         buffer_size -= bits;
+         buffer >> bits;
+         return Status( false, bitsize, val );
+      }
+
+      bits -= buffer_size;
+      val = buffer;
+      buffer_size = 0;
+      buffer = 0;
+      return Status( true, bits, val );
    }
 
    bool Read( uint32_t & val, const int bitsize, bool & error )
