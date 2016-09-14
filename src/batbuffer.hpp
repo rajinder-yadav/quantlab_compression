@@ -7,7 +7,7 @@ public:
 
    size_ft WriteTicker( const ticker_ft index )
    {
-      return Write( index, ticker_size );
+      return Write( index, TICKER_SIZE );
    }
 
    size_ft WriteExchange( const exchange_ft ex )
@@ -17,7 +17,7 @@ public:
 
    size_ft WriteSide( const side_ft side )
    {
-      return Write( side, side_size );
+      return Write( side, SIDE_SIZE );
    }
 
    size_ft WriteCondition( const condition_ft cond )
@@ -28,7 +28,7 @@ public:
    size_ft WriteTime( const time_ft val )
    {
       // Verify field type, it may have changed
-      assert( time_size == 32 + 5 );
+      assert( TIME_SIZE == 32 + 5 );
 
       // Mico-sec since midnight (24 hrs = 8.64e+10 = 37bits)
       buffer_ft hi = val >> 32;
@@ -40,12 +40,12 @@ public:
 
    uint32_t WritePrice( const std::string & val )
    {
-      return WriteString( val, price_size );
+      return WriteString( val, PRICE_SIZE );
    }
 
    size_ft WriteShares( const share_ft val )
    {
-      return Write( val, share_size );
+      return Write( val, SHARE_SIZE );
    }
 
    /**
@@ -80,7 +80,7 @@ public:
    {
       bool error;
       buffer_ft tmp;
-      bool more = Read( tmp, ticker_size, error );
+      bool more = Read( tmp, TICKER_SIZE, error );
       ticker = static_cast<ticker_ft>( tmp );
       return more;
    }
@@ -88,7 +88,7 @@ public:
    bool ReadExchance( exchange_ft & exchange )
    {
       std::string s;
-      bool more = ReadString( s, exchange_size );
+      bool more = ReadString( s, EXCHANGE_SIZE );
       exchange = s[0];
       return more;
    }
@@ -97,7 +97,7 @@ public:
    {
       bool error;
       buffer_ft tmp;
-      bool more = Read( tmp, side_size, error );
+      bool more = Read( tmp, SIDE_SIZE, error );
       side = static_cast<side_ft>( tmp );
       return more;
    }
@@ -105,7 +105,7 @@ public:
    bool ReadCondition( condition_ft & cond )
    {
       std::string s;
-      bool more = ReadString( s, condition_size );
+      bool more = ReadString( s, CONDITION_SIZE );
       cond = s[0];
       return more;
    }
@@ -113,7 +113,7 @@ public:
    bool ReadTime( time_ft & val )
    {
       // Verify field type, it may have changed
-      assert( time_size == 32 + 5 );
+      assert( TIME_SIZE == 32 + 5 );
       bool error1;
       bool error2;
       bool more = false;
@@ -136,7 +136,7 @@ public:
       price.clear();
       buffer_ft ch;
 
-      for ( size_ft i = 0; i < price_size; ++i )
+      for ( size_ft i = 0; i < PRICE_SIZE; ++i )
       {
          more = Read( ch, 8, error );
 
@@ -156,7 +156,7 @@ public:
    {
       bool error;
       buffer_ft tmp;
-      bool more = Read( tmp, share_size, error );
+      bool more = Read( tmp, SHARE_SIZE, error );
       val = static_cast<share_ft>( tmp );
       return more;
    }
@@ -175,6 +175,43 @@ public:
       }
 
       return more;
+   }
+
+   void Save( const std::string & filename )
+   {
+      std::ofstream f( filename, std::ios::binary );
+
+      if ( f.good() )
+      {
+         for ( buffer_ft v : packet )
+         {
+            f.write( reinterpret_cast<char*>(&v), sizeof( buffer_ft ) );
+         }
+      }
+   }
+
+   void Load( const std::string & filename )
+   {
+      std::ifstream f( filename, std::ios::binary );
+
+      if ( f.good() )
+      {
+         packet.clear();
+         buffer_ft buf;
+
+         while ( true )
+         {
+            f.read( reinterpret_cast<char*>(&buf), sizeof( buffer_ft ) );
+
+            if ( !f.good() )
+            {
+               break;
+            }
+
+            packet.push_back( buf );
+         } // while
+         SetReadMode();
+      }
    }
 
 };

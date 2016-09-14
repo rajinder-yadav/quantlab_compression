@@ -6,7 +6,7 @@ struct Runner : public TestRunner
       std::string test;
 
       /**
-       * Test class SymbolTable
+       * Test class SymbolTable.
        */
       test = "Create table verify index order";
       {
@@ -73,7 +73,7 @@ struct Runner : public TestRunner
       }
 
       /**
-       * Test class BatBuffer
+       * Test class BatBuffer.
        */
       test = "Packing zero value (1 bit)";
       {
@@ -298,7 +298,125 @@ struct Runner : public TestRunner
                        && b2.val == data2;
          check( result, test );
       }
+
+      /**
+       * Test BatBuffer::Write method.
+       */
+      test = "Write value < 32bits and check buffer.";
+      {
+         BatBuffer buf;
+         buf.Write( 3756, 12 ); // 12bits
+         uint32_t data = 3756 << ( 32 - 12 );
+
+         bool result = buf.buffer == data
+                       && buf.packet.size() == 0
+                       && buf.buffer_size == 32 - 12;
+         check( result, test );
+      }
+      test = "Write 32bit value and check buffer.";
+      {
+         BatBuffer buf;
+         buf.Write( 3982135763, 32 ); // 32bits
+         uint32_t data = 3982135763;
+
+         bool result = buf.buffer == 0
+                       && buf.packet.size() == 1
+                       && buf.packet.back() == 3982135763
+                       && buf.buffer_size == 32;
+         check( result, test );
+      }
+      test = "Write 2 values < 32bits and check buffer.";
+      {
+         BatBuffer buf;
+         buf.Write( 3756, 12 );  // 12bits
+         buf.Write( 57483, 16 ); // 16bits
+         uint32_t data1 = 3756 << ( 32 - 12 );
+         uint32_t data2 = 57483 << ( ( 32 - 12 ) - 16 );
+
+         bool result = buf.buffer == data1 | data2
+                       && buf.packet.size() == 0
+                       && buf.buffer_size == 32 - ( 12 + 16 );
+         check( result, test );
+      }
+      test = "Write 3 values == 32bits and check buffer.";
+      {
+         BatBuffer buf;
+         buf.Write( 3756, 12 );  // 12bits
+         buf.Write( 57483, 16 ); // 16bits
+         buf.Write( 8, 4 );      // 4bits
+         uint32_t data1 = 3756 << ( 32 - 12 );
+         uint32_t data2 = 57483 << ( ( 32 - 12 ) - 16 );
+         uint32_t data3 = 4;
+
+         bool result = buf.buffer == 0
+                       && buf.packet.size() == 1
+                       && buf.packet.back() == data1 | data2 | data3;
+         check( result, test );
+      }
+      test = "Write 2 values + pad == 32bits and check buffer.";
+      {
+         BatBuffer buf;
+         buf.Write( 3756, 12 );  // 12bits
+         buf.Write( 57483, 20 ); // 16bits
+         uint32_t data1 = 3756 << ( 32 - 12 );
+         uint32_t data2 = 57483;
+
+         bool result = buf.buffer == 0
+                       && buf.packet.size() == 1
+                       && buf.packet.back() == data1 | data2
+                       && buf.buffer_size == 32;
+         check( result, test );
+      }
+      test = "Write 1 values + pad > 32bits and check buffer.";
+      {
+         BatBuffer buf;
+         buf.Write( 15021, 14 + 25 ); // 14bits + 25 bits padding
+         uint32_t data1 = 15021 >> 7; // spill bits
+         uint32_t data2 = ( 15021 & uint32_t( pow( 2, 7 ) - 1 ) ) << ( 32 - 7 );
+
+         bool result = buf.buffer == data2
+                       && buf.packet.size() == 1
+                       && buf.packet.back() == data1
+                       && buf.buffer_size == 32 - 7;
+         check( result, test );
+      }
+      test = "Write 3 values > 32bits and check buffer.";
+      {
+         BatBuffer buf;
+         buf.Write( 3756, 12 );  // 12bits
+         buf.Write( 57483, 16 ); // 16bits
+         buf.Write( 9586, 14 );  // 14bits
+         uint32_t data1 = 3756 << ( 32 - 12 );
+         uint32_t data2 = 57483 << ( ( 32 - 12 ) - 16 );
+         uint32_t data3 = 9586 >> 10;
+         uint32_t data4 = ( 9586 & uint32_t( pow( 2, 10 ) - 1 ) ) << ( 32 - 10 );
+
+         bool result = buf.buffer == data4
+                       && buf.packet.size() == 1
+                       && buf.packet.back() == data1 | data2 | data3
+                       && buf.buffer_size == 22;
+         check( result, test );
+      }
       test = "Write string 'Hello' into buffer";
+      {
+         BatBuffer buf;
+         buf.WriteString( "Hello", 5 );
+         // H = 72   8bit
+         // e = 101  8bit
+         // l = 108  8bit
+         // l = 108  8bit
+         // o = 111  8bit
+
+         uint32_t n = 72;
+         n = ( n << 8 ) | 101;
+         n = ( n << 8 ) | 108;
+         n = ( n << 8 ) | 108;
+
+         bool result = buf.packet[0] == n
+                       && buf.buffer == 111 << ( 32 - 8 );
+         check( result, test );
+      }
+      test = "Write string 'Hello' into buffer & flush buffer";
       {
          BatBuffer buf;
          buf.WriteString( "Hello", 5 );
@@ -318,7 +436,11 @@ struct Runner : public TestRunner
                        && buf.packet[1] == 111 << ( 32 - 8 );
          check( result, test );
       }
-      test = "Switching read/write modes with 11bit value";
+
+      /**
+       * Test BatBuffer::Read method.
+       */
+      test = "Switching write to read modes with 11bit value";
       {
          BatBuffer buf;
          uint32_t val = 1995; // 11bits
@@ -329,10 +451,13 @@ struct Runner : public TestRunner
          bool error;
          buf.Read( data, 11, error );
 
-         bool result = data == val && !error;
+         bool result = data == val
+                       && !error
+                       && buf.buffer_size == 0    // No more data
+                       && buf.packet.size() == 0; // Empty packet
          check( result, test );
       }
-      test = "Switching read/write modes with zero value using 11bit";
+      test = "Switching write to read modes with zero value using 11bit";
       {
          BatBuffer buf;
          uint32_t val = 0;
@@ -343,10 +468,12 @@ struct Runner : public TestRunner
          bool error;
          buf.Read( data, 11, error );
 
-         bool result = data == val && !error;
+         bool result = data == val && !error
+                       && buf.buffer_size == 0    // No more data
+                       && buf.packet.size() == 0; // Empty packet
          check( result, test );
       }
-      test = "Switching read/write modes with 32bit value";
+      test = "Switching write to read modes with 32bit value";
       {
          BatBuffer buf;
          uint32_t val = 2863333375; // 11bits
@@ -357,10 +484,12 @@ struct Runner : public TestRunner
          bool error;
          buf.Read( data, 32, error );
 
-         bool result = data == val && !error;
+         bool result = data == val && !error
+                       && buf.buffer_size == 0    // No more data
+                       && buf.packet.size() == 0; // Empty packet
          check( result, test );
       }
-      test = "Switching read/write modes with zero value using 32bit";
+      test = "Switching write to read modes with zero value using 32bit";
       {
          BatBuffer buf;
          uint32_t val = 0;
@@ -372,7 +501,9 @@ struct Runner : public TestRunner
          bool error;
          buf.Read( data, 32, error );
 
-         bool result = data == val && !error;
+         bool result = data == val && !error
+                       && buf.buffer_size == 0    // No more data
+                       && buf.packet.size() == 0; // Empty packet
          check( result, test );
       }
       test = "Read two values from buffer 13, 220";
@@ -416,15 +547,31 @@ struct Runner : public TestRunner
                        && val[3] == 13
                        && val[4] == 220
                        && more1 && more2 && more3 && more4 && !more5;
+
          check( result, test );
       }
+
+      /**
+       * Test Writing a BAT packets.
+       */
       test = "BAT entry 1";
       {
          BatBuffer buf;
-         uint32_t s1 = buf.WriteTicker( 1 );      // index
-         uint32_t s2 = buf.WriteExchange( 'q' );   // ex
-         uint32_t s3 = buf.WriteSide( 3 );         // side B,A,T
-         uint32_t s4 = buf.WriteCondition( 'O' );  // condition
+         bool error;
+         uint32_t size;
+         share_ft shares;
+         std::string price;
+         time_ft timereport;
+         time_ft time;
+         char condition;
+         side_ft side;
+         char ex;
+         ticker_ft index;
+
+         uint32_t s1 = buf.WriteTicker( 1 );          // index
+         uint32_t s2 = buf.WriteExchange( 'q' );      // ex
+         uint32_t s3 = buf.WriteSide( 3 );            // side B,A,T
+         uint32_t s4 = buf.WriteCondition( 'O' );     // condition
          uint32_t s5 = buf.WriteTime( 42180525828 );  // time
          uint32_t s6 = buf.WriteTime( 42180526502 );  // time-report
          uint32_t s7 = buf.WritePrice( "13.06" );     // price
@@ -432,54 +579,52 @@ struct Runner : public TestRunner
          buf.Flush();
          buf.SetReadMode();
 
-         bool error;
-         share_ft shares;
          buf.ReadShares( shares );
-         cout << shares << "\n";
-
-         std::string price;
          buf.ReadPrice( price );
-         cout << price << endl;
-
-         time_ft timereport;
          buf.ReadTime( timereport );
-         cout << timereport << "\n";
-
-         time_ft time;
          buf.ReadTime( time );
-         cout << time << "\n";
-
-         char condition;
          buf.ReadCondition( condition );
-         cout << condition << "\n";
-
-         side_ft side;
          buf.ReadSide( side );
-         cout << long( side ) << "\n";
-
-         char ex;
          buf.ReadExchance( ex );
-         cout << ex << "\n";
-
-         ticker_ft index;
          buf.ReadTicker( index );
-         cout << index << "\n";
+
+         bool result = index == 1
+                       && ex == 'q'
+                       && side == 3
+                       && condition == 'O'
+                       && time == 42180525828
+                       && timereport == 42180526502
+                       && price == "13.06"
+                       && shares == 730;
+
+         check( result, test );
       }
       test = "BAT entry 2";
       {
          BatBuffer buf;
-         uint32_t s1 = buf.WriteTicker( 3 );            // index
-         uint32_t s2 = buf.WriteExchange( 'r' );     // ex
-         uint32_t s3 = buf.WriteSide( 3 );             // side B,A,T
+         bool error;
+         uint32_t size[2];
+         share_ft shares[2];
+         std::string price[2];
+         time_ft timereport[2];
+         time_ft time[2];
+         char condition[2];
+         side_ft side[2];
+         char ex[2];
+         ticker_ft index[2];
+
+         uint32_t s1 = buf.WriteTicker( 3 );          // index
+         uint32_t s2 = buf.WriteExchange( 'r' );      // ex
+         uint32_t s3 = buf.WriteSide( 3 );            // side B,A,T
          uint32_t s4 = buf.WriteCondition( 'O' );     // condition
          uint32_t s5 = buf.WriteTime( 42180525828 );  // time
          uint32_t s6 = buf.WriteTime( 42180526502 );  // time-report
          uint32_t s7 = buf.WritePrice( "12.56" );     // price
          uint32_t s8 = buf.WriteShares( 1102 );       // size
 
-         uint32_t r1 = buf.WriteTicker( 12 );           // index
-         uint32_t r2 = buf.WriteExchange( 'm' );     // ex
-         uint32_t r3 = buf.WriteSide( 1 );             // ride B,A,T
+         uint32_t r1 = buf.WriteTicker( 12 );         // index
+         uint32_t r2 = buf.WriteExchange( 'm' );      // ex
+         uint32_t r3 = buf.WriteSide( 1 );            // ride B,A,T
          uint32_t r4 = buf.WriteCondition( 'C' );     // condition
          uint32_t r5 = buf.WriteTime( 42180526503 );  // time
          uint32_t r6 = buf.WriteTime( 42180526672 );  // time-report
@@ -488,43 +633,158 @@ struct Runner : public TestRunner
          buf.Flush();
          buf.SetReadMode();
 
+         for ( int i = 0; i < 2; ++i )
+         {
+            buf.ReadShares( shares[i] );
+            buf.ReadPrice( price[i] );
+            buf.ReadTime( timereport[i] );
+            buf.ReadTime( time[i] );
+            buf.ReadCondition( condition[i] );
+            buf.ReadSide( side[i] );
+            buf.ReadExchance( ex[i] );
+            buf.ReadTicker( index[i] );
+         } // for
+
+         bool result = index[1] == 3
+                       && ex[1] == 'r'
+                       && side[1] == 3
+                       && condition[1] == 'O'
+                       && time[1] == 42180525828
+                       && timereport[1] == 42180526502
+                       && price[1] == "12.56"
+                       && shares[1] == 1102
+
+                       && index[0] == 12
+                       && ex[0] == 'm'
+                       && side[0] == 1
+                       && condition[0] == 'C'
+                       && time[0] == 42180526503
+                       && timereport[0] == 42180526672
+                       && price[0] == "3.09"
+                       && shares[0] == 243;
+
+         check( result, test );
+      }
+
+      /**
+       * Test Save and load of buffer.
+       */
+      test = "BAT single record save and load";
+      {
+         BatBuffer buf;
          bool error;
          uint32_t size;
+         share_ft shares;
+         std::string price;
+         time_ft timereport;
+         time_ft time;
+         char condition;
+         side_ft side;
+         char ex;
+         ticker_ft index;
+
+         uint32_t s1 = buf.WriteTicker( 1 );          // index
+         uint32_t s2 = buf.WriteExchange( 'q' );      // ex
+         uint32_t s3 = buf.WriteSide( 3 );            // side B,A,T
+         uint32_t s4 = buf.WriteCondition( 'O' );     // condition
+         uint32_t s5 = buf.WriteTime( 42180525828 );  // time
+         uint32_t s6 = buf.WriteTime( 42180526502 );  // time-report
+         uint32_t s7 = buf.WritePrice( "13.06" );     // price
+         uint32_t s8 = buf.WriteShares( 730 );        // shares
+         buf.Flush();
+         buf.Save("filetest1");
+
+         BatBuffer buf2;
+         buf2.Load("filetest1");
+
+         buf2.ReadShares( shares );
+         buf2.ReadPrice( price );
+         buf2.ReadTime( timereport );
+         buf2.ReadTime( time );
+         buf2.ReadCondition( condition );
+         buf2.ReadSide( side );
+         buf2.ReadExchance( ex );
+         buf2.ReadTicker( index );
+
+         bool result = index == 1
+                       && ex == 'q'
+                       && side == 3
+                       && condition == 'O'
+                       && time == 42180525828
+                       && timereport == 42180526502
+                       && price == "13.06"
+                       && shares == 730;
+
+         check( result, test );
+      }
+      test = "BAT 2 records save and load";
+      {
+         BatBuffer buf;
+         bool error;
+         uint32_t size[2];
+         share_ft shares[2];
+         std::string price[2];
+         time_ft timereport[2];
+         time_ft time[2];
+         char condition[2];
+         side_ft side[2];
+         char ex[2];
+         ticker_ft index[2];
+
+         uint32_t s1 = buf.WriteTicker( 3 );          // index
+         uint32_t s2 = buf.WriteExchange( 'r' );      // ex
+         uint32_t s3 = buf.WriteSide( 3 );            // side B,A,T
+         uint32_t s4 = buf.WriteCondition( 'O' );     // condition
+         uint32_t s5 = buf.WriteTime( 42180525828 );  // time
+         uint32_t s6 = buf.WriteTime( 42180526502 );  // time-report
+         uint32_t s7 = buf.WritePrice( "12.56" );     // price
+         uint32_t s8 = buf.WriteShares( 1102 );       // size
+
+         uint32_t r1 = buf.WriteTicker( 12 );         // index
+         uint32_t r2 = buf.WriteExchange( 'm' );      // ex
+         uint32_t r3 = buf.WriteSide( 1 );            // ride B,A,T
+         uint32_t r4 = buf.WriteCondition( 'C' );     // condition
+         uint32_t r5 = buf.WriteTime( 42180526503 );  // time
+         uint32_t r6 = buf.WriteTime( 42180526672 );  // time-report
+         uint32_t r7 = buf.WritePrice( "3.09" );      // price
+         uint32_t r8 = buf.WriteShares( 243 );        // size
+         buf.Flush();
+         buf.Save("filetest2");
+
+         BatBuffer buf2;
+         buf2.Load("filetest2");
 
          for ( int i = 0; i < 2; ++i )
          {
-            share_ft shares;
-            buf.ReadShares( shares );
-            cout << shares << "\n";
-
-            std::string price;
-            buf.ReadPrice( price );
-            cout << price << endl;
-
-            time_ft timereport;
-            buf.ReadTime( timereport );
-            cout << timereport << "\n";
-
-            time_ft time;
-            buf.ReadTime( time );
-            cout << time << "\n";
-
-            char condition;
-            buf.ReadCondition( condition );
-            cout << condition << "\n";
-
-            side_ft side;
-            buf.ReadSide( side );
-            cout << long( side ) << "\n";
-
-            char ex;
-            buf.ReadExchance( ex );
-            cout << ex << "\n";
-
-            ticker_ft index;
-            buf.ReadTicker( index );
-            cout << index << "\n";
+            buf2.ReadShares( shares[i] );
+            buf2.ReadPrice( price[i] );
+            buf2.ReadTime( timereport[i] );
+            buf2.ReadTime( time[i] );
+            buf2.ReadCondition( condition[i] );
+            buf2.ReadSide( side[i] );
+            buf2.ReadExchance( ex[i] );
+            buf2.ReadTicker( index[i] );
          } // for
-      }
+
+         bool result = index[1] == 3
+                       && ex[1] == 'r'
+                       && side[1] == 3
+                       && condition[1] == 'O'
+                       && time[1] == 42180525828
+                       && timereport[1] == 42180526502
+                       && price[1] == "12.56"
+                       && shares[1] == 1102
+
+                       && index[0] == 12
+                       && ex[0] == 'm'
+                       && side[0] == 1
+                       && condition[0] == 'C'
+                       && time[0] == 42180526503
+                       && timereport[0] == 42180526672
+                       && price[0] == "3.09"
+                       && shares[0] == 243;
+
+         check( result, test );
+      }         
    }
 };
