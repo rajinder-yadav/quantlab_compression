@@ -146,14 +146,14 @@ cmake -G "Unix Makefiles" -D CMAKE_BUILD_TYPE="Release" ../src
 make
 ```
 
-This should started the build to generate a release build of program, "./quantlab_compression".
+This should start the build to generate a release build of program "./quantlab_compression".
 
 On Windows change the above cmake command to:
 ```
 cmake -G "NMake Makefiles" -D CMAKE_BUILD_TYPE="Release" ../src
 ```
 
-**Running The Program**
+### Running The Program
 To view the program switches, run the program with no arguments, like:
 ```
 $ ./quantlab_compression 
@@ -182,28 +182,40 @@ Everything should pass!
 
 Now to test compression, type:
 ```
-/quantlab_compression testdata c
+./quantlab_compression testdata c
 ```
 
-You should see two files: compressed and compressed.table
-
-Now let inflate the compressed file:
+You should see something like the following output:
 ```
-/quantlab_compression compressed i
+Lines processed: 99998
+Lines processed: 99999
+Lines processed: 100000
+Compressed successfully!
+Filename: compressed
+
+Inflating file compressed ... Inflated successfully!
+Filename: inflated
 ```
 
-You should see a file call "inflated".
+There should be two files: compressed and compressed.table
 
-Now let's check the test file with the uncompressed file:
+Now let's inflate the compressed file:
+```
+./quantlab_compression compressed i
+```
+
+You should see a file called "inflated".
+
+Now let's diff the test file with the uncompressed file:
 ```
 diff testdata inflated
 ``` 
 
-You should be no output since there are no differences. To view the inflated file type, "cat inflated".
+You should see no output since there are no differences. To view the inflated file type, "cat inflated".
 
 Note: You can do the compress, uncompress steps with a single command like this:
 ```
-/quantlab_compression testdata b
+./quantlab_compression testdata b
 ```
 
 
