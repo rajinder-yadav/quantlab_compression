@@ -65,7 +65,7 @@ public:
     *          Packed value will be zero bit padded at msb.
     *          1111 + 1bit pad -> [0|1|1|1|1] 5bits
     */
-   Status pack32( const uint32_t val, const int blocks, const int pad )
+   Status pack32( const uint32_t val, const int blocks )
    {
       // Error to write into a full buffer.
       assert( 0 < buffer_size && buffer_size <= 32 );
@@ -73,7 +73,6 @@ public:
       assert( mode == WRITE_MODE );
 
       uint32_t bits = blocks > 0 ? blocks : ceil( log2( val ) );
-      bits += pad;
 
       // Invalid combination of value + blocks + pad
       assert( bits <= 64 );
@@ -89,7 +88,17 @@ public:
       // Buffer is full, ready to be written out & cleared.
       // bits will be the number of spillover bits.
       bits = bits - buffer_size;
-      buffer |= val >> bits;
+
+      // BUG FIX : right-shift operator does not left fill with zero is bit size = base type
+      if ( bits == 32 )
+      {
+         buffer = 0;
+      }
+      else
+      {
+         buffer |= val >> bits;
+      }
+
       uint32_t mask =  uint32_t( pow( 2, bits ) ) - 1;
       buffer_size = 0;
       return Status( true, bits, val & mask );
@@ -186,16 +195,16 @@ public:
     *
     * @return - The number of bits taken up by the value.
     */
-   uint32_t Write( uint32_t val, const int blocks = 0, const int pad = 0 )
+   uint32_t Write( uint32_t val, const int blocks = 0 )
    {
-      auto rv = pack32( val, blocks, pad );
+      auto rv = pack32( val, blocks );
 
       if ( rv.overflow )
       {
          packet.push_back( buffer );
          buffer = 0;
          buffer_size = 32;
-         pack32( rv.val, 0 /*blocks*/, rv.val == 0 ? rv.bits : 0 );
+         pack32( rv.val, rv.val == 0 ? rv.bits : 0 );
       }
       else if ( buffer_size == 0 )
       {
