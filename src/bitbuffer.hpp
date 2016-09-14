@@ -90,6 +90,9 @@ public:
    }
 
    void Write( const std::string & val ) {
+      for(char c : val) {
+         Write( uint32_t(c) );
+      }
    }
 
    /**
