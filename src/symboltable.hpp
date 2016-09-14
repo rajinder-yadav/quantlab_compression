@@ -9,7 +9,6 @@ class SymbolTable
    std::map< std::string, uint16_t > _table;
    uint16_t _index;
 
-   uint16_t _index;  
 public:
    SymbolTable()
       : _table{}
@@ -19,10 +18,35 @@ public:
 
    void Add( const std::string & s )
    {
+      auto r = _table.find( s );
+
+      if ( r == _table.end() )
+      {
+         _table.insert( std::make_pair( s, _index++ ) );
+      }
    }
 
    std::vector<std::string> Table()
    {
+      std::priority_queue<SymbolNode> order;
+
+      for ( auto v : _table )
+      {
+         order.push( SymbolNode( v.second, v.first ) );
+      }
+
+      std::vector<std::string> lookup;
+
+      while ( !order.empty() )
+      {
+         auto v = order.top();
+         lookup.push_back( v.symbol );
+         cout << v.index << " " << v.symbol << endl;
+         order.pop();
+      } // while
+
+      return lookup;
+
    }
 };
 

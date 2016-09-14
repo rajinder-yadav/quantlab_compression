@@ -10,12 +10,18 @@
 
 #include <cassert>
 
+// Add this at the end
+#include "testrunner.hpp"
+#include "testcoverage.hpp"
+
 using std::clog;
 using std::cout;
 using std::endl;
 
-int main( int argc, char* argv[] )
+int main(int argc, char *argv[])
 {
-   clog << "Hello World!" << endl;
-   return 0;
+  // Run tests
+  Runner tr;
+  tr.RunTests();
+  return 0;
 }
