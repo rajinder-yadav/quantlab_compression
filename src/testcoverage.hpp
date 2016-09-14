@@ -102,7 +102,7 @@ struct Runner : public TestRunner
       {
          BitBuffer buf;
          uint32_t val = 37;             // 6bits
-         auto b = buf.pack32( val, 0 ); // 6bits
+         auto b = buf.pack32( val, 6 ); // 6bits
          bool result = buf.buffer == 2483027968
                        && !b.overflow
                        && b.bits == 6
@@ -124,7 +124,7 @@ struct Runner : public TestRunner
       {
          BitBuffer buf;
          uint32_t val = pow( 2, 32 ) - 1; // 32bits
-         auto b = buf.pack32( val, 0 );  // 32bits
+         auto b = buf.pack32( val, 32 );  // 32bits
          bool result = buf.buffer == val
                        && !b.overflow
                        && b.bits == 32
@@ -195,8 +195,8 @@ struct Runner : public TestRunner
          // 2863333375 (0b 1010 1010 1010 1010 1111 1111 1111 1111) 32bits
          BitBuffer buf;
          uint32_t val = 2863333375;
-         auto b1 = buf.pack32( 6577, 0 ); // 13bits
-         auto b2 = buf.pack32( val, 0 );  // 32bits
+         auto b1 = buf.pack32( 6577, 13 ); // 13bits
+         auto b2 = buf.pack32( val, 32 );  // 32bits
 
          uint32_t data1 = 6577 << ( 32 - 13 );
          data1 = data1 | ( val >> 13 );
@@ -214,7 +214,7 @@ struct Runner : public TestRunner
          BitBuffer buf;
          uint32_t val = 2863333375;
          auto b1 = buf.pack32( 6577, 15 ); // 15bits
-         auto b2 = buf.pack32( val, 0 );   // 32bits
+         auto b2 = buf.pack32( val, 32 );  // 32bits
 
          uint32_t data1 = 6577 << ( 32 - 15 );
          data1 = data1 | ( val >> 15 );
@@ -231,8 +231,8 @@ struct Runner : public TestRunner
          // 2863333375 (0b 1010 1010 1010 1010 1111 1111 1111 1111) 32bits
          BitBuffer buf;
          uint32_t val = 2863333375;
-         auto b1 = buf.pack32( 442, 0 );  // 9bits
-         auto b2 = buf.pack32( val, 0 );  // 32bits
+         auto b1 = buf.pack32( 442, 9 );  // 9bits
+         auto b2 = buf.pack32( val, 32 );  // 32bits
 
          uint32_t data1 = 442 << ( 32 - 9 );
          data1 = data1 | ( val >> 9 );
@@ -249,8 +249,8 @@ struct Runner : public TestRunner
          // 61865903 (0b11 1010 1111 1111 1111 1010 1111) 26bits
          BitBuffer buf;
          uint32_t val = 61865903;
-         auto b1 = buf.pack32( val, 0 ); // 26bits
-         auto b2 = buf.pack32( 43, 0 );  // 6bits
+         auto b1 = buf.pack32( val, 26 ); // 26bits
+         auto b2 = buf.pack32( 43, 6 );   // 6bits
 
          uint32_t data1 = 61865903 << ( 32 - 26 );
          data1 = data1 | 43;
@@ -267,8 +267,8 @@ struct Runner : public TestRunner
          // 61865903 (0b11 1010 1111 1111 1111 1010 1111) 26bits
          BitBuffer buf;
          uint32_t val = 61865903;
-         auto b1 = buf.pack32( val, 0 ); // 26bits
-         auto b2 = buf.pack32( 98, 0 );  // 7bits
+         auto b1 = buf.pack32( val, 26 ); // 26bits
+         auto b2 = buf.pack32( 98, 7 );   // 7bits
 
          uint32_t data1 = 61865903 << ( 32 - 26 );
          data1 = data1 | 98 >> 1;
@@ -285,8 +285,8 @@ struct Runner : public TestRunner
          // 61865903 (0b11 1010 1111 1111 1111 1010 1111)
          BitBuffer buf;
          uint32_t val = 61865903;
-         auto b1 = buf.pack32( val, 0 ); // 26bits
-         auto b2 = buf.pack32( 816, 0 ); // 10bits
+         auto b1 = buf.pack32( val, 26 ); // 26bits
+         auto b2 = buf.pack32( 816, 10 ); // 10bits
 
          uint32_t data1 = val << ( 32 - 26 );
          data1 = data1 | 816 >> ( 10 - ( 32 - 26 ) );
@@ -303,78 +303,61 @@ struct Runner : public TestRunner
          BitBuffer buf;
          buf.Write( "Hello" );
          buf.Flush();
-         // H = 72   7bit
-         // e = 101  7bit
-         // l = 108  7bit
-         // l = 108  7bit
-         // o = 111  7bit
+         // H = 72   8bit
+         // e = 101  8bit
+         // l = 108  8bit
+         // l = 108  8bit
+         // o = 111  8bit
 
          uint32_t n = 72;
-         n = ( n << 7 ) | 101;
-         n = ( n << 7 ) | 108;
-         n = ( n << 7 ) | 108;
-         // 4bit left in buffer
-         n = ( n << 4 ) | ( 111 >> 3 );
+         n = ( n << 8 ) | 101;
+         n = ( n << 8 ) | 108;
+         n = ( n << 8 ) | 108;
 
          bool result = buf.packet[0] == n
-                       && buf.packet[1] == ( 111 & 7 ) << ( 32 - 3 );
+                       && buf.packet[1] == 111 << ( 32 - 8 );
          check( result, test );
       }
       test = "Switching read/write modes with 11bit value";
       {
          BitBuffer buf;
          uint32_t val = 1995; // 11bits
-         uint32_t bufval = 4183818240;
          buf.Write( val, 11 );
-         bool c1 = buf.buffer == bufval;
-         buf.SetReadMode();
-         bool c2 = buf.buffer == val;
-         buf.SetWriteMode();
-         bool c3 = buf.buffer == bufval;
+         buf.Flush();
          buf.SetReadMode();
          uint32_t data;
          bool error;
          buf.Read( data, 11, error );
 
-         bool result = c1 && c2 && c3 && data == val && !error;
+         bool result = data == val && !error;
          check( result, test );
       }
       test = "Switching read/write modes with zero value using 11bit";
       {
          BitBuffer buf;
          uint32_t val = 0;
-         uint32_t bufval = 0;
          buf.Write( val, 11 );
-         bool c1 = buf.buffer == bufval;
-         buf.SetReadMode();
-         bool c2 = buf.buffer == val;
-         buf.SetWriteMode();
-         bool c3 = buf.buffer == bufval;
+         buf.Flush();
          buf.SetReadMode();
          uint32_t data;
          bool error;
          buf.Read( data, 11, error );
 
-         bool result = c1 && c2 && c3 && data == val && !error;
+         bool result = data == val && !error;
          check( result, test );
       }
       test = "Switching read/write modes with 32bit value";
       {
          BitBuffer buf;
          uint32_t val = 2863333375; // 11bits
-         uint32_t bufval = 0;
          buf.Write( val, 32 );
-         bool c1 = buf.buffer == bufval;
-         buf.SetReadMode();
-         bool c2 = buf.buffer == val;
-         buf.SetWriteMode();
-         bool c3 = buf.buffer == bufval;
+         buf.Flush();
          buf.SetReadMode();
          uint32_t data;
          bool error;
          buf.Read( data, 32, error );
 
-         bool result = c1 && c2 && c3 && data == val && !error;
+         bool result = data == val && !error;
          check( result, test );
       }      
       test = "Switching read/write modes with zero value using 32bit";
@@ -383,24 +366,21 @@ struct Runner : public TestRunner
          uint32_t val = 0;
          uint32_t bufval = 0;
          buf.Write( val, 32 );
-         bool c1 = buf.buffer == bufval;
-         buf.SetReadMode();
-         bool c2 = buf.buffer == val;
-         buf.SetWriteMode();
-         bool c3 = buf.buffer == bufval;
+         buf.Flush();
          buf.SetReadMode();
          uint32_t data;
          bool error;
          buf.Read( data, 32, error );
 
-         bool result = c1 && c2 && c3 && data == val && !error;
+         bool result = data == val && !error;
          check( result, test );
       }
       test = "Read two values from buffer 13, 220";
       {
          BitBuffer buf;
-         buf.Write( 13 );     // 4bits
-         buf.Write( 220 );    // 8bits
+         buf.Write( 13, 4 );     // 4bits
+         buf.Write( 220, 8 );    // 8bits
+         buf.Flush();
          buf.SetReadMode();
          uint32_t val1;
          uint32_t val2;
@@ -420,6 +400,7 @@ struct Runner : public TestRunner
          buf.Write( 1978, 11 );  // 11bits
          buf.Write( 0, 2 );      // 2bits
          buf.Write( 82, 7 );     // 7bits
+         buf.Flush();
          buf.SetReadMode();
          uint32_t val[4];
          bool error;
@@ -436,6 +417,43 @@ struct Runner : public TestRunner
                        && val[4] == 220
                        && more1 && more2 && more3 && more4 && !more5;
          check( result, test );
+      }
+      test = "BAT entry";
+      {
+         BitBuffer buf;
+         uint32_t s1 = buf.Write(1,16);         // index
+         uint32_t s2 = buf.Write("q");          // ex
+         uint32_t s3 = buf.Write(3,2);          // side B,A,T
+         uint32_t s4 = buf.Write("O");          // condition
+         uint32_t s5 = buf.WriteTime(42180525828);  // time
+         uint32_t s6 = buf.WriteTime(42180526502);  // time-report
+         uint32_t s7 = buf.Write("13.06");          // price
+         uint32_t s8 = buf.WriteSize(730);          // size
+         buf.Flush();
+         buf.SetReadMode();
+
+         bool error;
+         uint32_t size;
+         buf.ReadSize(size);
+         cout << size << "\n";
+         std::string price = buf.ReadString(5);
+         cout << price << endl;
+         uint64_t timereport;
+         buf.ReadTime(timereport);
+         cout << timereport << "\n";
+         uint64_t time;
+         buf.ReadTime(time);
+         cout << time << "\n";
+         std::string condition = buf.ReadString(1);
+         cout << condition << "\n";
+         uint32_t side;
+         buf.Read(size,2,error);
+         cout << size << "\n";
+         std::string ex = buf.ReadString(1);
+         cout << ex << "\n";
+         uint32_t index;
+         buf.Read(index, 16, error);
+         cout << index << "\n";
       }
    }
 };
