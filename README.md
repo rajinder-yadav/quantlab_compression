@@ -130,6 +130,83 @@ My code could break due to the assumption I've made about field bit sizes to go 
 
 I wasn't able to test with the entire input test file due to odd corruption, so there might be possible errors due to field sizing that I did not catch. I'm very confident I would be able to tackle these errors in a short amount of time. I also made use of defensive programming and added assert which would be tripped in debug mode, this is both good for the API user as well as implementor.
 
+## Build The Project
+I used CMake to build me project which is a cross platform makefile generator, site: https://cmake.org/
+
+I will assume you're working on Linux (use similar commands on Windows). Also I've provided a command to generate me NMake file for windows, but unable to test it.
+
+```
+git clone https://github.com/rajinder-yadav/quantlab_compression.git
+
+cd quantlab_compression
+mkdir build
+cp testdata build/
+cd build
+cmake -G "Unix Makefiles" -D CMAKE_BUILD_TYPE="Release" ../src
+make
+```
+
+This should started the build to generate a release build of program, "./quantlab_compression".
+
+On Windows change the above cmake command to:
+```
+cmake -G "NMake Makefiles" -D CMAKE_BUILD_TYPE="Release" ../src
+```
+
+**Running The Program**
+To view the program switches, run the program with no arguments, like:
+```
+$ ./quantlab_compression 
+
+Author: Rajinder Yadav <rajinder.yadav@hotmail.com>
+
+Program Arguments: quantlab_compression <filename> <mode>
+
+<mode> must be one of:
+
+Pass single argument to run the following:
+
+  c = Compress file.
+  i = Inflate compressed file.
+  b = Compress than inflate.
+  t = Run tests.
+  a = Run all, Test, Compress, Inflate.
+```
+
+To run all the tests, type: 
+```
+./quantlab_compression t t
+```
+
+Everything should pass!
+
+Now to test compression, type:
+```
+/quantlab_compression testdata c
+```
+
+You should see two files: compressed and compressed.table
+
+Now let inflate the compressed file:
+```
+/quantlab_compression compressed i
+```
+
+You should see a file call "inflated".
+
+Now let's check the test file with the uncompressed file:
+```
+diff testdata inflated
+``` 
+
+You should be no output since there are no differences. To view the inflated file type, "cat inflated".
+
+Note: You can do the compress, uncompress steps with a single command like this:
+```
+/quantlab_compression testdata b
+```
+
+
 ## Work Log
 
 Sunday 11, 2016
