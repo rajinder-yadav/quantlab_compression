@@ -96,6 +96,38 @@ public:
    }
 
    /**
+    * Unpack value from buffer given bit size.
+    *
+    * @input[out] val -Fetched value register.
+    *
+    * @input[in] bitsize - Bit size of value to unpack.
+    *
+    * @return Status - Contain status of unpack operation.bits:
+    *                    Values {overflow, bits, value}
+    *                    overflow - true if underflow, mean more bits to be read.
+    *                    bits     - Count of bits remaining to be read.
+    *                    value    - Value read, will be partial if underflow true.
+    *
+    * Note: Buffer must be in read ready state, what this mean is empty space
+    *       in the buffer must be on the msb side. When data is being packed
+    *       the empty space will be on the lsb side, so buffer must be right-shifted
+    *       before unpack operation!
+    *
+    *       (!) Uses SetReadMode() to prepare buffer for reading.
+    *
+    *               <not ready>        <ready>
+    *  Buffer =>  [datat|......]  => [......|data]
+    *               msb | lsb          msb  |lsb
+    */
+   Status unpack32( uint32_t & val, const int bitsize )
+   {
+   }
+
+   bool Read( uint32_t & val, const int bitsize, bool & error )
+   {
+   }
+
+   /**
     * Write value into packet.
     *
     * Important! Call Flush to after the last write, this will insure any remaining
