@@ -39,6 +39,27 @@ public:
     */
    Status pack32( const uint32_t val, const int blocks, const int pad )
    {
+      assert( 0 < buffer_size && buffer_size <= 32 );
+
+      // If block size passed used it as # of bits to pack value in.
+      // Packed value will be zero bit padded at msb.
+      uint32_t bits = blocks > 0 ? blocks : ceil( log2( val ) );
+      bits += pad;
+
+      if ( bits <= buffer_size )
+      {
+         // Buffer still has space
+         buffer_size -= bits;
+         buffer = buffer | ( val << buffer_size );
+         return Status( false, bits, 0 );
+      }
+
+      // Buffer is full, ready to be written out & cleared.
+      bits = bits - buffer_size;
+      buffer = buffer | ( val >> bits );
+      uint32_t mask =  uint32_t( pow( 2, bits ) ) - 1;
+      buffer_size = 0;
+      return Status( true, bits, val & mask );
    }
 
    /**
