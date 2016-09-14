@@ -392,7 +392,7 @@ struct Runner : public TestRunner
                        && val2 == 13;
          check( result, test );
       }
-      test = "Read two values from buffer 13, 220";
+      test = "Read 5 values from buffer";
       {
          BatBuffer buf;
          buf.Write( 220, 8 );    // 8bits
@@ -421,60 +421,70 @@ struct Runner : public TestRunner
       test = "BAT entry 1";
       {
          BatBuffer buf;
-         uint32_t s1 = buf.Write( 1, 16 );           // index
-         uint32_t s2 = buf.WriteString( "q", 1 );    // ex
-         uint32_t s3 = buf.Write( 3, 2 );            // side B,A,T
-         uint32_t s4 = buf.WriteString( "O", 1 );    // condition
-         uint32_t s5 = buf.WriteTime( 42180525828 ); // time
-         uint32_t s6 = buf.WriteTime( 42180526502 ); // time-report
-         uint32_t s7 = buf.WritePrice( "13.06", 5 ); // price
-         uint32_t s8 = buf.WriteSize( 730 );         // size
+         uint32_t s1 = buf.WriteTicker( 1 );      // index
+         uint32_t s2 = buf.WriteExchange( 'q' );   // ex
+         uint32_t s3 = buf.WriteSide( 3 );         // side B,A,T
+         uint32_t s4 = buf.WriteCondition( 'O' );  // condition
+         uint32_t s5 = buf.WriteTime( 42180525828 );  // time
+         uint32_t s6 = buf.WriteTime( 42180526502 );  // time-report
+         uint32_t s7 = buf.WritePrice( "13.06" );     // price
+         uint32_t s8 = buf.WriteShares( 730 );        // shares
          buf.Flush();
          buf.SetReadMode();
 
          bool error;
-         uint32_t size;
-         buf.ReadSize( size );
-         cout << size << "\n";
-         std::string price = buf.ReadPrice( 5 );
+         share_ft shares;
+         buf.ReadShares( shares );
+         cout << shares << "\n";
+
+         std::string price;
+         buf.ReadPrice( price );
          cout << price << endl;
-         uint64_t timereport;
+
+         time_ft timereport;
          buf.ReadTime( timereport );
          cout << timereport << "\n";
-         uint64_t time;
+
+         time_ft time;
          buf.ReadTime( time );
          cout << time << "\n";
-         std::string condition = buf.ReadString( 1 );
+
+         char condition;
+         buf.ReadCondition( condition );
          cout << condition << "\n";
-         uint32_t side;
-         buf.Read( size, 2, error );
-         cout << size << "\n";
-         std::string ex = buf.ReadString( 1 );
+
+         side_ft side;
+         buf.ReadSide( side );
+         cout << long( side ) << "\n";
+
+         char ex;
+         buf.ReadExchance( ex );
          cout << ex << "\n";
-         uint32_t index;
-         buf.Read( index, 16, error );
+
+         ticker_ft index;
+         buf.ReadTicker( index );
          cout << index << "\n";
       }
       test = "BAT entry 2";
       {
          BatBuffer buf;
-         uint32_t s1 = buf.Write( 3, 16 );            // index
-         uint32_t s2 = buf.WriteString( "r", 1 );     // ex
-         uint32_t s3 = buf.Write( 3, 2 );             // side B,A,T
-         uint32_t s4 = buf.WriteString( "O", 1 );     // condition
+         uint32_t s1 = buf.WriteTicker( 3 );            // index
+         uint32_t s2 = buf.WriteExchange( 'r' );     // ex
+         uint32_t s3 = buf.WriteSide( 3 );             // side B,A,T
+         uint32_t s4 = buf.WriteCondition( 'O' );     // condition
          uint32_t s5 = buf.WriteTime( 42180525828 );  // time
          uint32_t s6 = buf.WriteTime( 42180526502 );  // time-report
-         uint32_t s7 = buf.WritePrice( "12.56", 6 );  // price
-         uint32_t s8 = buf.WriteSize( 1102 );         // size
+         uint32_t s7 = buf.WritePrice( "12.56" );     // price
+         uint32_t s8 = buf.WriteShares( 1102 );       // size
 
-         uint32_t r1 = buf.Write( 12, 16 );           // index
-         uint32_t r2 = buf.WriteString( "m", 1 );     // ex
-         uint32_t r3 = buf.Write( 1, 2 );             // ride B,A,T
-         uint32_t r4 = buf.WriteString( "C", 1 );     // condition
+         uint32_t r1 = buf.WriteTicker( 12 );           // index
+         uint32_t r2 = buf.WriteExchange( 'm' );     // ex
+         uint32_t r3 = buf.WriteSide( 1 );             // ride B,A,T
+         uint32_t r4 = buf.WriteCondition( 'C' );     // condition
          uint32_t r5 = buf.WriteTime( 42180526503 );  // time
          uint32_t r6 = buf.WriteTime( 42180526672 );  // time-report
-         uint32_t r7 = buf.WritePrice( "3.09", 6 );   // price
-         uint32_t r8 = buf.WriteSize( 243 );          // size
+         uint32_t r7 = buf.WritePrice( "3.09" );      // price
+         uint32_t r8 = buf.WriteShares( 243 );        // size
          buf.Flush();
          buf.SetReadMode();
 
@@ -483,27 +493,38 @@ struct Runner : public TestRunner
 
          for ( int i = 0; i < 2; ++i )
          {
-            buf.ReadSize( size );
-            cout << size << "\n";
-            std::string price = buf.ReadPrice( 6 );
+            share_ft shares;
+            buf.ReadShares( shares );
+            cout << shares << "\n";
+
+            std::string price;
+            buf.ReadPrice( price );
             cout << price << endl;
-            uint64_t timereport;
+
+            time_ft timereport;
             buf.ReadTime( timereport );
             cout << timereport << "\n";
-            uint64_t time;
+
+            time_ft time;
             buf.ReadTime( time );
             cout << time << "\n";
-            std::string condition = buf.ReadString( 1 );
+
+            char condition;
+            buf.ReadCondition( condition );
             cout << condition << "\n";
-            uint32_t side;
-            buf.Read( size, 2, error );
-            cout << size << "\n";
-            std::string ex = buf.ReadString( 1 );
+
+            side_ft side;
+            buf.ReadSide( side );
+            cout << long( side ) << "\n";
+
+            char ex;
+            buf.ReadExchance( ex );
             cout << ex << "\n";
-            uint32_t index;
-            buf.Read( index, 16, error );
+
+            ticker_ft index;
+            buf.ReadTicker( index );
             cout << index << "\n";
-         }
+         } // for
       }
    }
 };

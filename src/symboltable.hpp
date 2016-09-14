@@ -41,7 +41,6 @@ public:
       {
          auto v = order.top();
          lookup.push_back( v.symbol );
-         cout << v.index << " " << v.symbol << endl;
          order.pop();
       } // while
 
