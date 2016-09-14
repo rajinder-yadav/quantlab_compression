@@ -27,8 +27,18 @@ public:
    void SetWriteMode()
    {
       mode = WRITE_MODE;
-      buffer_size = 32 - buffer_size;
-      buffer << buffer_size;
+
+      if ( buffer != 0 && buffer_size == 32 )
+      {
+         packet.push_back( buffer );
+         buffer = 0;
+         buffer_size = 32;
+      }
+      else
+      {
+         buffer_size = 32 - buffer_size;
+         buffer = buffer << buffer_size;
+      }
    }
 
    /**
@@ -38,8 +48,17 @@ public:
    void SetReadMode()
    {
       mode = READ_MODE;
-      buffer >> buffer_size;
-      buffer_size = 32 - buffer_size;
+
+      if ( buffer == 0 && buffer_size == 32 && packet.size() > 0 )
+      {
+         buffer = packet.back();
+         packet.pop_back();
+      }
+      else
+      {
+         buffer = buffer >> buffer_size;
+         buffer_size = 32 - buffer_size;
+      }
    }
 
    /**
@@ -141,7 +160,7 @@ public:
       {
          val = buffer & uint32_t( pow( 2, bits ) - 1 );
          buffer_size -= bits;
-         buffer >> bits;
+         buffer = buffer >> bits;
          return Status( false, bitsize, val );
       }
 
@@ -204,7 +223,7 @@ public:
          packet.push_back( buffer );
          buffer = 0;
          buffer_size = 32;
-         pack32( rv.val, rv.val == 0 ? rv.bits : 0 );
+         pack32( rv.val, rv.bits );
       }
       else if ( buffer_size == 0 )
       {
