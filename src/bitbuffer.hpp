@@ -5,12 +5,13 @@
 
 class BitBuffer
 {
+public:   
    enum mode_e { WRITE_MODE, READ_MODE };
-public:
-   std::vector<uint32_t> packet;
+
+   std::vector<buffer_ft> packet;
    mode_e mode;
-   uint32_t buffer;
-   int buffer_size;
+   buffer_ft buffer;
+   size_ft buffer_size;
 
 public:
    BitBuffer()
@@ -88,14 +89,14 @@ public:
     *          Packed value will be zero bit padded at msb.
     *          1111 + 1bit pad -> [0|1|1|1|1] 5bits
     */
-   Status pack32( const uint32_t val, const int blocks )
+   Status pack32( const uint32_t val, const size_ft blocks )
    {
       // Error to write into a full buffer.
       assert( 0 < buffer_size && buffer_size <= 32 );
       // Make sure in correct mode.
       assert( mode == WRITE_MODE );
 
-      uint32_t bits = blocks;
+      size_ft bits = blocks;
 
       // Invalid combination of value + blocks + pad
       assert( bits <= 64 );
@@ -122,7 +123,7 @@ public:
          buffer |= val >> bits;
       }
 
-      uint32_t mask =  uint32_t( pow( 2, bits ) ) - 1;
+      buffer_ft mask =  uint32_t( pow( 2, bits ) ) - 1;
       buffer_size = 0;
       return Status( true, bits, val & mask );
    }
@@ -151,14 +152,14 @@ public:
     *  Buffer =>  [datat|......]  => [......|data]
     *               msb | lsb          msb  |lsb
     */
-   Status unpack32( uint32_t & val, const int bitsize )
+   Status unpack32( uint32_t & val, const size_ft bitsize )
    {
       // Error to read empty buffer.
       assert( 0 < buffer_size );
       // Make sure in correct mode.
       assert( mode == READ_MODE );
 
-      uint32_t bits = bitsize;
+      size_ft bits = bitsize;
 
       if ( bits <= buffer_size )
       {
@@ -175,13 +176,48 @@ public:
       return Status( true, bits, val );
    }
 
-   bool Read( uint32_t & val, const int bitsize, bool & error )
+   /**
+    * Write value into packet.
+    *
+    * Important! Call Flush to after the last write, this will insure any remaining
+    * data in the buffer is saved to the packet.bits
+    *
+    * @param[in] val - Interger value at most 32bits.
+    *
+    * @param[in] blocks - Bit size of value to write with.
+    *
+    * @param[in] pad - Padding in bits to use when writting.
+    *
+    * @return - The number of bits taken up by the value.
+    */
+   uint32_t Write( uint32_t val, const size_ft blocks )
+   {
+      auto rv = pack32( val, blocks );
+
+      if ( rv.overflow )
+      {
+         packet.push_back( buffer );
+         buffer = 0;
+         buffer_size = 32;
+         pack32( rv.val, rv.bits );
+      }
+      else if ( buffer_size == 0 )
+      {
+         packet.push_back( buffer );
+         buffer = 0;
+         buffer_size = 32;
+      }
+
+      return blocks;
+   }
+
+   bool Read( uint32_t & val, const size_ft bitsize, bool & error )
    {
       // Alert caller of potential bug for reading from empty buffer.
       assert( packet.size() > 0 || buffer_size > 0 );
       assert( mode == READ_MODE );
 
-      uint32_t size = buffer_size;
+      size_ft size = buffer_size;
       auto status = unpack32( val, bitsize );
 
       if ( status.overflow )
@@ -203,110 +239,6 @@ public:
       }
 
       return ( packet.size() > 0 || buffer_size > 0 );
-   }
-   std::string ReadString( const int count )
-   {
-      bool error;
-      std::string s;
-      uint32_t ch;
-
-      for ( int i = 0; i < count; ++i )
-      {
-         Read( ch, 8, error );
-         s = char( ch ) + s;
-      }
-
-      return s;
-   }
-
-   bool ReadSize( uint32_t & val )
-   {
-      bool error;
-      Read( val, 14, error );
-      return error;
-   }
-
-   bool ReadTime( uint64_t & val )
-   {
-      bool error;
-      uint32_t tmp;
-
-      Read( tmp, 32, error );
-      val = tmp;
-      Read( tmp, 5, error );
-      uint64_t hi = tmp;
-      val = ( hi << 32 ) | val;
-      return error;
-   }
-
-   /**
-    * Write value into packet.
-    *
-    * Important! Call Flush to after the last write, this will insure any remaining
-    * data in the buffer is saved to the packet.bits
-    *
-    * @param[in] val - Interger value at most 32bits.
-    *
-    * @param[in] blocks - Bit size of value to write with.
-    *
-    * @param[in] pad - Padding in bits to use when writting.
-    *
-    * @return - The number of bits taken up by the value.
-    */
-   uint32_t Write( uint32_t val, const int blocks )
-   {
-      auto rv = pack32( val, blocks );
-
-      if ( rv.overflow )
-      {
-         packet.push_back( buffer );
-         buffer = 0;
-         buffer_size = 32;
-         pack32( rv.val, rv.bits );
-      }
-      else if ( buffer_size == 0 )
-      {
-         packet.push_back( buffer );
-         buffer = 0;
-         buffer_size = 32;
-      }
-
-      return blocks;
-   }
-
-   uint32_t WriteTime( uint64_t val )
-   {
-      // Mico-sec since midnight (24 hrs = 8.64e+10 = 37bits)
-      uint32_t hi = val >> 32;
-      uint32_t lo = static_cast<uint32_t>( val );
-      Write( hi, 5 );
-      Write( lo, 32 );
-      return 37;
-   }
-   uint32_t WriteSize( uint32_t val )
-   {
-      // Max 10000 (14bits) ???
-      Write( val, 14 );
-      return 14;
-   }
-
-   /**
-    * Write string into packet.
-    *
-    * @param[in] val - string to be packed.
-    *
-    * @return - The number of bits occupied by the string.
-    */
-   uint32_t Write( const std::string & val )
-   {
-      uint32_t bits = 0;
-
-      for ( char c : val )
-      {
-         bits += Write( uint32_t( c ), 8 );
-      }
-
-      return bits / 8; // chars
    }
 
    /**
