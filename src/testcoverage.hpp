@@ -82,7 +82,7 @@ struct Runner : public TestRunner
          auto b = buf.pack32( val, 1 ); // 1bit including 1bit padding
          bool result = buf.buffer == 0
                        && !b.overflow
-                       && b.bits == 1
+                       && b.bits == 0
                        && b.val == 0;
 
          check( result, test );
@@ -94,7 +94,7 @@ struct Runner : public TestRunner
          auto b = buf.pack32( val, 5 ); // 5bits including 1bit padding
          bool result = buf.buffer == 2013265920
                        && !b.overflow
-                       && b.bits == 5  // How many bits were packed
+                       && b.bits == 0  // How many bits were packed
                        && b.val == 0;
          check( result, test );
       }
@@ -105,7 +105,7 @@ struct Runner : public TestRunner
          auto b = buf.pack32( val, 6 ); // 6bits
          bool result = buf.buffer == 2483027968
                        && !b.overflow
-                       && b.bits == 6
+                       && b.bits == 0
                        && b.val == 0;
          check( result, test );
       }
@@ -116,7 +116,7 @@ struct Runner : public TestRunner
          auto b = buf.pack32( val, 7 );  // 7bits including 1bit padding
          bool result = buf.buffer == 37 << ( 32 - 7 )
                        && !b.overflow
-                       && b.bits == 7
+                       && b.bits == 0
                        && b.val == 0;
          check( result, test );
       }
@@ -127,7 +127,7 @@ struct Runner : public TestRunner
          auto b = buf.pack32( val, 32 );  // 32bits
          bool result = buf.buffer == val
                        && !b.overflow
-                       && b.bits == 32
+                       && b.bits == 0
                        && b.val == 0;
          check( result, test );
       }
@@ -138,7 +138,7 @@ struct Runner : public TestRunner
          auto b = buf.pack32( val, 32 );  // 32bits
          bool result = buf.buffer == val
                        && !b.overflow
-                       && b.bits == 32
+                       && b.bits == 0
                        && b.val == 0;
          check( result, test );
       }
@@ -258,7 +258,7 @@ struct Runner : public TestRunner
 
          bool result = buf.buffer == data1
                        && !b2.overflow
-                       && b2.bits == 6  // size of last pack
+                       && b2.bits == 0  // size of last pack
                        && b2.val == data2;
          check( result, test );
       }
@@ -371,7 +371,7 @@ struct Runner : public TestRunner
       {
          BatBuffer buf;
          buf.Write( 15021, 14 + 25 ); // 14bits + 25 bits padding
-         uint32_t data1 = 15021 >> 7; // spill bits
+         uint32_t data1 = 15021 >> 7; // spill 7bits
          uint32_t data2 = ( 15021 & uint32_t( pow( 2, 7 ) - 1 ) ) << ( 32 - 7 );
 
          bool result = buf.buffer == data2
@@ -451,10 +451,10 @@ struct Runner : public TestRunner
          bool error;
          buf.Read( data, 11, error );
 
-         bool result = data == val
+         bool result = ( data == val )
                        && !error
-                       && buf.buffer_size == 0    // No more data
-                       && buf.packet.size() == 0; // Empty packet
+                       && ( buf.buffer == 0 );       // No more data
+         //&& (buf.packet.size() == 0); // Empty packet
          check( result, test );
       }
       test = "Switching write to read modes with zero value using 11bit";
@@ -469,7 +469,7 @@ struct Runner : public TestRunner
          buf.Read( data, 11, error );
 
          bool result = data == val && !error
-                       && buf.buffer_size == 0    // No more data
+                       && buf.buffer == 0         // No more data
                        && buf.packet.size() == 0; // Empty packet
          check( result, test );
       }
@@ -480,13 +480,15 @@ struct Runner : public TestRunner
          buf.Write( val, 32 );
          buf.Flush();
          buf.SetReadMode();
+         assert( buf.packet.size() == 0 );
          uint32_t data;
          bool error;
          buf.Read( data, 32, error );
 
-         bool result = data == val && !error
-                       && buf.buffer_size == 0    // No more data
-                       && buf.packet.size() == 0; // Empty packet
+         bool result = ( data == val )
+                       && !error
+                       && ( buf.buffer_size == 0 )       // No more data
+                       && ( buf.packet.size() == 0 ); // Empty packet
          check( result, test );
       }
       test = "Switching write to read modes with zero value using 32bit";
@@ -502,7 +504,7 @@ struct Runner : public TestRunner
          buf.Read( data, 32, error );
 
          bool result = data == val && !error
-                       && buf.buffer_size == 0    // No more data
+                       && buf.buffer == 0    // No more data
                        && buf.packet.size() == 0; // Empty packet
          check( result, test );
       }
@@ -516,11 +518,11 @@ struct Runner : public TestRunner
          uint32_t val1;
          uint32_t val2;
          bool error;
-         buf.Read( val1, 8, error );
-         buf.Read( val2, 4, error );
+         buf.Read( val1, 4, error );
+         buf.Read( val2, 8, error );
 
-         bool result = val1 == 220
-                       && val2 == 13;
+         bool result = val1 == 13
+                       && val2 == 220;
          check( result, test );
       }
       test = "Read 5 values from buffer";
@@ -535,17 +537,17 @@ struct Runner : public TestRunner
          buf.SetReadMode();
          uint32_t val[4];
          bool error;
-         bool more1 = buf.Read( val[0], 7, error );
-         bool more2 = buf.Read( val[1], 2, error );
+         bool more1 = buf.Read( val[0], 8, error );
+         bool more2 = buf.Read( val[1], 4, error );
          bool more3 = buf.Read( val[2], 11, error );
-         bool more4 = buf.Read( val[3], 4, error );
-         bool more5 = buf.Read( val[4], 8, error );
+         bool more4 = buf.Read( val[3], 2, error );
+         bool more5 = buf.Read( val[4], 7, error );
 
-         bool result = val[0] == 82
-                       && val[1] == 0
+         bool result = val[0] == 220
+                       && val[1] == 13
                        && val[2] == 1978
-                       && val[3] == 13
-                       && val[4] == 220
+                       && val[3] == 0
+                       && val[4] == 82
                        && more1 && more2 && more3 && more4 && !more5;
 
          check( result, test );
@@ -579,14 +581,14 @@ struct Runner : public TestRunner
          buf.Flush();
          buf.SetReadMode();
 
-         buf.ReadShares( shares );
-         buf.ReadPrice( price );
-         buf.ReadTime( timereport );
-         buf.ReadTime( time );
-         buf.ReadCondition( condition );
-         buf.ReadSide( side );
-         buf.ReadExchance( ex );
          buf.ReadTicker( index );
+         buf.ReadExchance( ex );
+         buf.ReadSide( side );
+         buf.ReadCondition( condition );
+         buf.ReadTime( time );
+         buf.ReadTime( timereport );
+         buf.ReadPrice( price );
+         buf.ReadShares( shares );
 
          bool result = index == 1
                        && ex == 'q'
@@ -635,33 +637,33 @@ struct Runner : public TestRunner
 
          for ( int i = 0; i < 2; ++i )
          {
-            buf.ReadShares( shares[i] );
-            buf.ReadPrice( price[i] );
-            buf.ReadTime( timereport[i] );
-            buf.ReadTime( time[i] );
-            buf.ReadCondition( condition[i] );
-            buf.ReadSide( side[i] );
-            buf.ReadExchance( ex[i] );
             buf.ReadTicker( index[i] );
+            buf.ReadExchance( ex[i] );
+            buf.ReadSide( side[i] );
+            buf.ReadCondition( condition[i] );
+            buf.ReadTime( time[i] );
+            buf.ReadTime( timereport[i] );
+            buf.ReadPrice( price[i] );
+            buf.ReadShares( shares[i] );
          } // for
 
-         bool result = index[1] == 3
-                       && ex[1] == 'r'
-                       && side[1] == 3
-                       && condition[1] == 'O'
-                       && time[1] == 42180525828
-                       && timereport[1] == 42180526502
-                       && price[1] == "12.56"
-                       && shares[1] == 1102
+         bool result = index[0] == 3
+                       && ex[0] == 'r'
+                       && side[0] == 3
+                       && condition[0] == 'O'
+                       && time[0] == 42180525828
+                       && timereport[0] == 42180526502
+                       && price[0] == "12.56"
+                       && shares[0] == 1102
 
-                       && index[0] == 12
-                       && ex[0] == 'm'
-                       && side[0] == 1
-                       && condition[0] == 'C'
-                       && time[0] == 42180526503
-                       && timereport[0] == 42180526672
-                       && price[0] == "3.09"
-                       && shares[0] == 243;
+                       && index[1] == 12
+                       && ex[1] == 'm'
+                       && side[1] == 1
+                       && condition[1] == 'C'
+                       && time[1] == 42180526503
+                       && timereport[1] == 42180526672
+                       && price[1] == "3.09"
+                       && shares[1] == 243;
 
          check( result, test );
       }
@@ -692,19 +694,19 @@ struct Runner : public TestRunner
          uint32_t s7 = buf.WritePrice( "13.06" );     // price
          uint32_t s8 = buf.WriteShares( 730 );        // shares
          buf.Flush();
-         buf.Save("filetest1");
+         buf.Save( "filetest1" );
 
          BatBuffer buf2;
-         buf2.Load("filetest1");
+         buf2.Load( "filetest1" );
 
-         buf2.ReadShares( shares );
-         buf2.ReadPrice( price );
-         buf2.ReadTime( timereport );
-         buf2.ReadTime( time );
-         buf2.ReadCondition( condition );
-         buf2.ReadSide( side );
-         buf2.ReadExchance( ex );
          buf2.ReadTicker( index );
+         buf2.ReadExchance( ex );
+         buf2.ReadSide( side );
+         buf2.ReadCondition( condition );
+         buf2.ReadTime( time );
+         buf2.ReadTime( timereport );
+         buf2.ReadPrice( price );
+         buf2.ReadShares( shares );
 
          bool result = index == 1
                        && ex == 'q'
@@ -749,42 +751,373 @@ struct Runner : public TestRunner
          uint32_t r7 = buf.WritePrice( "3.09" );      // price
          uint32_t r8 = buf.WriteShares( 243 );        // size
          buf.Flush();
-         buf.Save("filetest2");
+         buf.Save( "filetest2" );
 
          BatBuffer buf2;
-         buf2.Load("filetest2");
+         buf2.Load( "filetest2" );
 
          for ( int i = 0; i < 2; ++i )
          {
-            buf2.ReadShares( shares[i] );
-            buf2.ReadPrice( price[i] );
-            buf2.ReadTime( timereport[i] );
-            buf2.ReadTime( time[i] );
-            buf2.ReadCondition( condition[i] );
-            buf2.ReadSide( side[i] );
-            buf2.ReadExchance( ex[i] );
             buf2.ReadTicker( index[i] );
-         } // for
+            buf2.ReadExchance( ex[i] );
+            buf2.ReadSide( side[i] );
+            buf2.ReadCondition( condition[i] );
+            buf2.ReadTime( time[i] );
+            buf2.ReadTime( timereport[i] );
+            buf2.ReadPrice( price[i] );
+            buf2.ReadShares( shares[i] );
+         }
 
-         bool result = index[1] == 3
-                       && ex[1] == 'r'
-                       && side[1] == 3
-                       && condition[1] == 'O'
-                       && time[1] == 42180525828
-                       && timereport[1] == 42180526502
-                       && price[1] == "12.56"
-                       && shares[1] == 1102
+         bool result = index[0] == 3
+                       && ex[0] == 'r'
+                       && side[0] == 3
+                       && condition[0] == 'O'
+                       && time[0] == 42180525828
+                       && timereport[0] == 42180526502
+                       && price[0] == "12.56"
+                       && shares[0] == 1102
 
-                       && index[0] == 12
-                       && ex[0] == 'm'
-                       && side[0] == 1
-                       && condition[0] == 'C'
-                       && time[0] == 42180526503
-                       && timereport[0] == 42180526672
-                       && price[0] == "3.09"
-                       && shares[0] == 243;
+                       && index[1] == 12
+                       && ex[1] == 'm'
+                       && side[1] == 1
+                       && condition[1] == 'C'
+                       && time[1] == 42180526503
+                       && timereport[1] == 42180526672
+                       && price[1] == "3.09"
+                       && shares[1] == 243;
 
          check( result, test );
-      }         
+      }
+      test = "BAT 5 records write and read";
+      {
+         // STIBX,i,A,0,42180550149,42180550822,27.04,500
+         // CNX,i,B,0,42180555115,42180555793,35.87,436
+         // FFG,i,B,0,42180562216,42180562892,8.85,4218
+         // TES,i,B,0,42180564054,42180564732,10.25,7100
+         // CCC,i,T,0,42180564198,42180564812,13.12,540
+         BatBuffer buf;
+         bool error;
+         share_ft shares[5];
+         std::string price[5];
+         time_ft timereport[5];
+         time_ft time[5];
+         char condition[5];
+         side_ft side[5];
+         char ex[5];
+         ticker_ft index[5];
+
+         // STIBX,i,A,0,42180550149,42180550822,27.04,500
+         buf.WriteTicker( 1 );          // index
+         buf.WriteExchange( 'i' );      // ex
+         buf.WriteSide( 1 );            // side B,A,T
+         buf.WriteCondition( '0' );     // condition
+         buf.WriteTime( 42180550149 );  // time
+         buf.WriteTime( 42180550822 );  // time-report
+         buf.WritePrice( "27.04" );     // price
+         buf.WriteShares( 500 );        // size
+
+         // CNX,i,B,0,42180555115,42180555793,35.87,436
+         buf.WriteTicker( 2 );          // index
+         buf.WriteExchange( 'i' );      // ex
+         buf.WriteSide( 0 );            // side B,A,T
+         buf.WriteCondition( '0' );     // condition
+         buf.WriteTime( 42180555115 );  // time
+         buf.WriteTime( 42180555793 );  // time-report
+         buf.WritePrice( "35.87" );     // price
+         buf.WriteShares( 436 );        // size
+
+         // FFG,i,B,0,42180562216,42180562892,8.85,4218
+         buf.WriteTicker( 3 );          // index
+         buf.WriteExchange( 'i' );      // ex
+         buf.WriteSide( 0 );            // side B,A,T
+         buf.WriteCondition( '0' );     // condition
+         buf.WriteTime( 42180562216 );  // time
+         buf.WriteTime( 42180562892 );  // time-report
+         buf.WritePrice( "8.85" );     // price
+         buf.WriteShares( 4218 );        // size
+
+         // TES,i,B,0,42180564054,42180564732,10.25,7100
+         buf.WriteTicker( 4 );          // index
+         buf.WriteExchange( 'i' );      // ex
+         buf.WriteSide( 0 );            // side B,A,T
+         buf.WriteCondition( '0' );     // condition
+         buf.WriteTime( 42180564054 );  // time
+         buf.WriteTime( 42180564732 );  // time-report
+         buf.WritePrice( "10.25" );     // price
+         buf.WriteShares( 7100 );        // size
+
+         // CCC,i,T,0,42180564198,42180564812,13.12,540
+         buf.WriteTicker( 5 );          // index
+         buf.WriteExchange( 'i' );      // ex
+         buf.WriteSide( 2 );            // side B,A,T
+         buf.WriteCondition( '0' );     // condition
+         buf.WriteTime( 42180564198 );  // time
+         buf.WriteTime( 42180564812 );  // time-report
+         buf.WritePrice( "13.12" );     // price
+         buf.WriteShares( 540 );        // size
+         buf.Flush();
+         buf.SetReadMode();
+
+         for ( int i = 0; i < 5; ++i )
+         {
+            buf.ReadTicker( index[i] );
+            buf.ReadExchance( ex[i] );
+            buf.ReadSide( side[i] );
+            buf.ReadCondition( condition[i] );
+            buf.ReadTime( time[i] );
+            buf.ReadTime( timereport[i] );
+            buf.ReadPrice( price[i] );
+            buf.ReadShares( shares[i] );
+         } // for
+
+         // STIBX,i,A,0,42180550149,42180550822,27.04,500
+         // CNX,i,B,0,42180555115,42180555793,35.87,436
+         // FFG,i,B,0,42180562216,42180562892,8.85,4218
+         // TES,i,B,0,42180564054,42180564732,10.25,7100
+         // CCC,i,T,0,42180564198,42180564812,13.12,540
+         bool result = index[4] == 5
+                       && ex[4] == 'i'
+                       && side[4] == 2
+                       && condition[4] == '0'
+                       && time[4] == 42180564198
+                       && timereport[4] == 42180564812
+                       && price[4] == "13.12"
+                       && shares[4] == 540
+
+                       && index[3] == 4
+                       && ex[3] == 'i'
+                       && side[3] == 0
+                       && condition[3] == '0'
+                       && time[3] == 42180564054
+                       && timereport[3] == 42180564732
+                       && price[3] == "10.25"
+                       && shares[3] == 7100
+
+                       && index[2] == 3
+                       && ex[2] == 'i'
+                       && side[2] == 0
+                       && condition[2] == '0'
+                       && time[2] == 42180562216
+                       && timereport[2] == 42180562892
+                       && price[2] == "8.85"
+                       && shares[2] == 4218
+
+                       && index[1] == 2
+                       && ex[1] == 'i'
+                       && side[1] == 0
+                       && condition[1] == '0'
+                       && time[1] == 42180555115
+                       && timereport[1] == 42180555793
+                       && price[1] == "35.87"
+                       && shares[1] == 436
+
+                       && index[0] == 1
+                       && ex[0] == 'i'
+                       && side[0] == 1
+                       && condition[0] == '0'
+                       && time[0] == 42180550149
+                       && timereport[0] == 42180550822
+                       && price[0] == "27.04"
+                       && shares[0] == 500;
+         check( result, test );
+      }
+      test = "BAT 5 records save and load";
+      {
+         // STIBX,i,A,0,42180550149,42180550822,27.04,500
+         // CNX,i,B,0,42180555115,42180555793,35.87,436
+         // FFG,i,B,0,42180562216,42180562892,8.85,4218
+         // TES,i,B,0,42180564054,42180564732,10.25,7100
+         // CCC,i,T,0,42180564198,42180564812,13.12,540
+         BatBuffer buf;
+         bool error;
+         share_ft shares[5];
+         std::string price[5];
+         time_ft timereport[5];
+         time_ft time[5];
+         char condition[5];
+         side_ft side[5];
+         char ex[5];
+         ticker_ft index[5];
+
+         // STIBX,i,A,0,42180550149,42180550822,27.04,500
+         buf.WriteTicker( 1 );          // index
+         buf.WriteExchange( 'i' );      // ex
+         buf.WriteSide( 1 );            // side B,A,T
+         buf.WriteCondition( '0' );     // condition
+         buf.WriteTime( 42180550149 );  // time
+         buf.WriteTime( 42180550822 );  // time-report
+         buf.WritePrice( "27.04" );     // price
+         buf.WriteShares( 500 );        // size
+
+         // CNX,i,B,0,42180555115,42180555793,35.87,436
+         buf.WriteTicker( 2 );          // index
+         buf.WriteExchange( 'i' );      // ex
+         buf.WriteSide( 0 );            // side B,A,T
+         buf.WriteCondition( '0' );     // condition
+         buf.WriteTime( 42180555115 );  // time
+         buf.WriteTime( 42180555793 );  // time-report
+         buf.WritePrice( "35.87" );     // price
+         buf.WriteShares( 436 );        // size
+
+         // FFG,i,B,0,42180562216,42180562892,8.85,4218
+         buf.WriteTicker( 3 );          // index
+         buf.WriteExchange( 'i' );      // ex
+         buf.WriteSide( 0 );            // side B,A,T
+         buf.WriteCondition( '0' );     // condition
+         buf.WriteTime( 42180562216 );  // time
+         buf.WriteTime( 42180562892 );  // time-report
+         buf.WritePrice( "8.85" );     // price
+         buf.WriteShares( 4218 );        // size
+
+         // TES,i,B,0,42180564054,42180564732,10.25,7100
+         buf.WriteTicker( 4 );          // index
+         buf.WriteExchange( 'i' );      // ex
+         buf.WriteSide( 0 );            // side B,A,T
+         buf.WriteCondition( '0' );     // condition
+         buf.WriteTime( 42180564054 );  // time
+         buf.WriteTime( 42180564732 );  // time-report
+         buf.WritePrice( "10.25" );     // price
+         buf.WriteShares( 7100 );        // size
+
+         // CCC,i,T,0,42180564198,42180564812,13.12,540
+         buf.WriteTicker( 5 );          // index
+         buf.WriteExchange( 'i' );      // ex
+         buf.WriteSide( 2 );            // side B,A,T
+         buf.WriteCondition( '0' );     // condition
+         buf.WriteTime( 42180564198 );  // time
+         buf.WriteTime( 42180564812 );  // time-report
+         buf.WritePrice( "13.12" );     // price
+         buf.WriteShares( 540 );        // size
+         buf.Flush();
+         buf.Save( "filetest2" );
+
+         BatBuffer buf2;
+         buf2.Load( "filetest2" );
+
+         for ( int i = 0; i < 5; ++i )
+         {
+            buf2.ReadTicker( index[i] );
+            buf2.ReadExchance( ex[i] );
+            buf2.ReadSide( side[i] );
+            buf2.ReadCondition( condition[i] );
+            buf2.ReadTime( time[i] );
+            buf2.ReadTime( timereport[i] );
+            buf2.ReadPrice( price[i] );
+            buf2.ReadShares( shares[i] );
+         } // for
+
+         // STIBX,i,A,0,42180550149,42180550822,27.04,500
+         // CNX,i,B,0,42180555115,42180555793,35.87,436
+         // FFG,i,B,0,42180562216,42180562892,8.85,4218
+         // TES,i,B,0,42180564054,42180564732,10.25,7100
+         // CCC,i,T,0,42180564198,42180564812,13.12,540
+         bool result = index[4] == 5
+                       && ex[4] == 'i'
+                       && side[4] == 2
+                       && condition[4] == '0'
+                       && time[4] == 42180564198
+                       && timereport[4] == 42180564812
+                       && price[4] == "13.12"
+                       && shares[4] == 540
+
+                       && index[3] == 4
+                       && ex[3] == 'i'
+                       && side[3] == 0
+                       && condition[3] == '0'
+                       && time[3] == 42180564054
+                       && timereport[3] == 42180564732
+                       && price[3] == "10.25"
+                       && shares[3] == 7100
+
+                       && index[2] == 3
+                       && ex[2] == 'i'
+                       && side[2] == 0
+                       && condition[2] == '0'
+                       && time[2] == 42180562216
+                       && timereport[2] == 42180562892
+                       && price[2] == "8.85"
+                       && shares[2] == 4218
+
+                       && index[1] == 2
+                       && ex[1] == 'i'
+                       && side[1] == 0
+                       && condition[1] == '0'
+                       && time[1] == 42180555115
+                       && timereport[1] == 42180555793
+                       && price[1] == "35.87"
+                       && shares[1] == 436
+
+                       && index[0] == 1
+                       && ex[0] == 'i'
+                       && side[0] == 1
+                       && condition[0] == '0'
+                       && time[0] == 42180550149
+                       && timereport[0] == 42180550822
+                       && price[0] == "27.04"
+                       && shares[0] == 500;
+         check( result, test );
+      }
+
+      test = "BAT single record save and load 10,000 times";
+      {
+         BatBuffer buf;
+         bool error;
+         uint32_t size;
+         share_ft shares;
+         std::string price;
+         time_ft timereport;
+         time_ft time;
+         char condition;
+         side_ft side;
+         char ex;
+         ticker_ft index;
+
+         int count = 10000;
+
+         for ( int i = 0; i < count; ++i )
+         {
+            uint32_t s1 = buf.WriteTicker( 1 );          // index
+            uint32_t s2 = buf.WriteExchange( 'q' );      // ex
+            uint32_t s3 = buf.WriteSide( 3 );            // side B,A,T
+            uint32_t s4 = buf.WriteCondition( 'O' );     // condition
+            uint32_t s5 = buf.WriteTime( 42180525828 );  // time
+            uint32_t s6 = buf.WriteTime( 42180526502 );  // time-report
+            uint32_t s7 = buf.WritePrice( "13.06" );     // price
+            uint32_t s8 = buf.WriteShares( 730 );        // shares
+         }
+
+         buf.Flush();
+         buf.Save( "filetest1" );
+
+         BatBuffer buf2;
+         buf2.Load( "filetest1" );
+
+         bool pass = true;
+
+         for ( int i = 0; i < count; ++i )
+         {
+            buf2.ReadTicker( index );
+            buf2.ReadExchance( ex );
+            buf2.ReadSide( side );
+            buf2.ReadCondition( condition );
+            buf2.ReadTime( time );
+            buf2.ReadTime( timereport );
+            buf2.ReadPrice( price );
+            buf2.ReadShares( shares );
+
+            bool result = index == 1
+                          && ex == 'q'
+                          && side == 3
+                          && condition == 'O'
+                          && time == 42180525828
+                          && timereport == 42180526502
+                          && price == "13.06"
+                          && shares == 730;
+            pass = pass & result;
+         }
+
+         check( pass, test );
+      }
+
    }
 };
