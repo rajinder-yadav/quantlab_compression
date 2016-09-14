@@ -95,9 +95,9 @@ struct Runner : public TestRunner
       test = "Packing value 15 with 1bit pad, testing pad bit is on msb end of value";
       {
          BatBuffer buf;
-         uint32_t val = 15;             // 4bits
-         auto b = buf.pack32( val, 5 ); // 5bits including 1bit padding
-         bool result = buf.buffer == 2013265920
+         uint32_t val = 15;                      // 4bits (0b1111)
+         auto b = buf.pack32( val, 5 );          // 5bits including 1bit padding
+         bool result = buf.buffer == 2013265920  // 0b1111000000000000000000000000000
                        && !b.overflow
                        && b.bits == 0  // How many bits were packed
                        && b.val == 0;
@@ -106,9 +106,9 @@ struct Runner : public TestRunner
       test = "Packing value 37 < 32bits";
       {
          BatBuffer buf;
-         uint32_t val = 37;             // 6bits
-         auto b = buf.pack32( val, 6 ); // 6bits
-         bool result = buf.buffer == 2483027968
+         uint32_t val = 37;                      // 6bits (0b100101)
+         auto b = buf.pack32( val, 6 );          // 6bits
+         bool result = buf.buffer == 2483027968  // 0b10010100000000000000000000000000
                        && !b.overflow
                        && b.bits == 0
                        && b.val == 0;
@@ -117,9 +117,9 @@ struct Runner : public TestRunner
       test = "Packing value 37 < 32bits, fixed bits 7";
       {
          BatBuffer buf;
-         uint32_t val = 37;              // 6bits
-         auto b = buf.pack32( val, 7 );  // 7bits including 1bit padding
-         bool result = buf.buffer == 37 << ( 32 - 7 )
+         uint32_t val = 37;                            // 6bits (0b100101)
+         auto b = buf.pack32( val, 7 );                // 7bits including 1bit padding
+         bool result = buf.buffer == 37 << ( 32 - 7 )  // 0b1001010000000000000000000000000
                        && !b.overflow
                        && b.bits == 0
                        && b.val == 0;
@@ -128,8 +128,8 @@ struct Runner : public TestRunner
       test = "Packing value 2^32 == 32bits";
       {
          BatBuffer buf;
-         uint32_t val = pow( 2, 32 ) - 1; // 32bits
-         auto b = buf.pack32( val, 32 );  // 32bits
+         uint32_t val = pow( 2, 32 ) - 1;  // 32bits (0b11111111111111111111111111111111)
+         auto b = buf.pack32( val, 32 );   // 32bits
          bool result = buf.buffer == val
                        && !b.overflow
                        && b.bits == 0
@@ -139,7 +139,7 @@ struct Runner : public TestRunner
       test = "Packing value 2^32 == 32bits, fixed bits 32";
       {
          BatBuffer buf;
-         uint32_t val = pow( 2, 32 ) - 1; // 32bits
+         uint32_t val = pow( 2, 32 ) - 1; // 32bits (0b11111111111111111111111111111111)
          auto b = buf.pack32( val, 32 );  // 32bits
          bool result = buf.buffer == val
                        && !b.overflow
@@ -149,9 +149,8 @@ struct Runner : public TestRunner
       }
       test = "Packing value 4294945450 with padding of 5 bits";
       {
-         // 4294945450 (0b11111111111111111010101010101010) 32bits
          BatBuffer buf;
-         uint32_t val = 4294945450;       // 32bits
+         uint32_t val = 4294945450;       // 32bits (0b11111111111111111010101010101010) 32bits
          auto b = buf.pack32( val, 37 );  // 37bits including 5bits padding
 
          uint32_t data1 = val >> 5;
@@ -165,9 +164,8 @@ struct Runner : public TestRunner
       }
       test = "Packing value 4294945450 with padding of 9 bits";
       {
-         // 4294945450 (0b11111111111111111010101010101010) 32bits
          BatBuffer buf;
-         uint32_t val = 4294945450;      // 32bits
+         uint32_t val = 4294945450;      // 32bits (0b11111111111111111010101010101010) 32bits
          auto b = buf.pack32( val, 41 ); // 41bits including 9bits padding
 
          uint32_t data1 = val >> 9;
@@ -181,10 +179,9 @@ struct Runner : public TestRunner
       }
       test = "Packing value 4294945450 with padding of 32 bits";
       {
-         // 4294945450 (0b11111111111111111010101010101010) 32bits
          BatBuffer buf;
-         uint32_t val = 4294945450;      // 32bits
-         auto b = buf.pack32( val, 64 ); // 64bits including 9bits padding
+         uint32_t val = 4294945450;      // 32bits (0b11111111111111111010101010101010) 32bits
+         auto b = buf.pack32( val, 64 ); // 64bits including 32bits padding
 
          uint32_t data1 = 0;
          uint32_t data2 = 4294945450;
@@ -197,10 +194,9 @@ struct Runner : public TestRunner
       }
       test = "Packing value 6577, 2863333375 with padding of 32 bits";
       {
-         // 2863333375 (0b 1010 1010 1010 1010 1111 1111 1111 1111) 32bits
          BatBuffer buf;
-         uint32_t val = 2863333375;
-         auto b1 = buf.pack32( 6577, 13 ); // 13bits
+         uint32_t val = 2863333375;        // 32bits (0b 1010 1010 1010 1010 1111 1111 1111 1111)
+         auto b1 = buf.pack32( 6577, 13 ); // 13bits (0b1100110110001)
          auto b2 = buf.pack32( val, 32 );  // 32bits
 
          uint32_t data1 = 6577 << ( 32 - 13 );
@@ -215,10 +211,9 @@ struct Runner : public TestRunner
       }
       test = "Packing value 6577 (15bit), 2863333375 with padding of 32 bits";
       {
-         // 2863333375 (0b 1010 1010 1010 1010 1111 1111 1111 1111) 32bits
          BatBuffer buf;
-         uint32_t val = 2863333375;
-         auto b1 = buf.pack32( 6577, 15 ); // 15bits
+         uint32_t val = 2863333375;        // 32bits (0b 1010 1010 1010 1010 1111 1111 1111 1111)
+         auto b1 = buf.pack32( 6577, 15 ); // 15bits (0b1100110110001)
          auto b2 = buf.pack32( val, 32 );  // 32bits
 
          uint32_t data1 = 6577 << ( 32 - 15 );
@@ -233,11 +228,10 @@ struct Runner : public TestRunner
       }
       test = "Packing value 442, 2863333375 with padding of 32 bits";
       {
-         // 2863333375 (0b 1010 1010 1010 1010 1111 1111 1111 1111) 32bits
          BatBuffer buf;
-         uint32_t val = 2863333375;
-         auto b1 = buf.pack32( 442, 9 );  // 9bits
-         auto b2 = buf.pack32( val, 32 );  // 32bits
+         uint32_t val = 2863333375;       // 32bits (0b 1010 1010 1010 1010 1111 1111 1111 1111)
+         auto b1 = buf.pack32( 442, 9 );  // 9bits  (0b110111010)
+         auto b2 = buf.pack32( val, 32 ); // 32bits
 
          uint32_t data1 = 442 << ( 32 - 9 );
          data1 = data1 | ( val >> 9 );
@@ -251,11 +245,10 @@ struct Runner : public TestRunner
       }
       test = "Packing value 61865903, 43(0b1100010) to create a 32bit value";
       {
-         // 61865903 (0b11 1010 1111 1111 1111 1010 1111) 26bits
          BatBuffer buf;
-         uint32_t val = 61865903;
+         uint32_t val = 61865903;         // 26bits (0b11 1010 1111 1111 1111 1010 1111)
          auto b1 = buf.pack32( val, 26 ); // 26bits
-         auto b2 = buf.pack32( 43, 6 );   // 6bits
+         auto b2 = buf.pack32( 43, 6 );   // 6bits  (0b101011)
 
          uint32_t data1 = 61865903 << ( 32 - 26 );
          data1 = data1 | 43;
@@ -263,20 +256,19 @@ struct Runner : public TestRunner
 
          bool result = buf.buffer == data1
                        && !b2.overflow
-                       && b2.bits == 0  // size of last pack
+                       && b2.bits == 0
                        && b2.val == data2;
          check( result, test );
       }
       test = "Packing value 61865903, 98(0b1100010) so that 1 bit of zero value spills-over";
       {
-         // 61865903 (0b11 1010 1111 1111 1111 1010 1111) 26bits
          BatBuffer buf;
-         uint32_t val = 61865903;
+         uint32_t val = 61865903;         // 26bits (0b11 1010 1111 1111 1111 1010 1111)
          auto b1 = buf.pack32( val, 26 ); // 26bits
-         auto b2 = buf.pack32( 98, 7 );   // 7bits
+         auto b2 = buf.pack32( 98, 7 );   // 7bits  (0b1100010)
 
          uint32_t data1 = 61865903 << ( 32 - 26 );
-         data1 = data1 | 98 >> 1;
+         data1 = data1 | (98 >> 1);
          uint32_t data2 = 98 & 1;
 
          bool result = buf.buffer == data1
@@ -285,16 +277,15 @@ struct Runner : public TestRunner
                        && b2.val == data2;
          check( result, test );
       }
-      test = "Packing value 61865903, 816(0b1100110000) so that 1 bit of zero value spills-over";
+      test = "Packing value 61865903, 816(0b1100110000) so that 4 bits of zero value spills-over";
       {
-         // 61865903 (0b11 1010 1111 1111 1111 1010 1111)
          BatBuffer buf;
-         uint32_t val = 61865903;
+         uint32_t val = 61865903;         // 26bits (0b11 1010 1111 1111 1111 1010 1111)
          auto b1 = buf.pack32( val, 26 ); // 26bits
-         auto b2 = buf.pack32( 816, 10 ); // 10bits
+         auto b2 = buf.pack32( 816, 10 ); // 10bits (0b1100110000)
 
          uint32_t data1 = val << ( 32 - 26 );
-         data1 = data1 | 816 >> ( 10 - ( 32 - 26 ) );
+         data1 = data1 | 816 >>  4;
          uint32_t data2 = 816 & uint32_t( pow( 2, 4 ) - 1 );
 
          bool result = buf.buffer == data1
@@ -310,8 +301,8 @@ struct Runner : public TestRunner
       test = "Write value < 32bits and check buffer.";
       {
          BatBuffer buf;
-         buf.Write( 3756, 12 ); // 12bits
-         uint32_t data = 3756 << ( 32 - 12 );
+         buf.Write( 3756, 12 );                 // 12bits (0b111010101100)
+         uint32_t data = 3756 << ( 32 - 12 );   // 32bits (0b11101010110000000000000000000000)
 
          bool result = buf.buffer == data
                        && buf.packet.size() == 0
@@ -321,7 +312,7 @@ struct Runner : public TestRunner
       test = "Write 32bit value and check buffer.";
       {
          BatBuffer buf;
-         buf.Write( 3982135763, 32 ); // 32bits
+         buf.Write( 3982135763, 32 ); // 32bits (0b11101101010110101001000111010011)
          uint32_t data = 3982135763;
 
          bool result = buf.buffer == 0
@@ -333,38 +324,41 @@ struct Runner : public TestRunner
       test = "Write 2 values < 32bits and check buffer.";
       {
          BatBuffer buf;
-         buf.Write( 3756, 12 );  // 12bits
-         buf.Write( 57483, 16 ); // 16bits
-         uint32_t data1 = 3756 << ( 32 - 12 );
-         uint32_t data2 = 57483 << ( ( 32 - 12 ) - 16 );
+         buf.Write( 3756, 12 );  // 12bits (0b111010101100)
+         buf.Write( 57483, 16 ); // 16bits (0b1110000010001011)
+
+         uint32_t data1 = 3756 << ( 32 - 12 );           // 0b11101010110000000000000000000000
+         uint32_t data2 = 57483 << ( ( 32 - 12 ) - 16 ); // 0b11100000100010110000
 
          bool result = buf.buffer == data1 | data2
                        && buf.packet.size() == 0
                        && buf.buffer_size == 32 - ( 12 + 16 );
          check( result, test );
       }
-      test = "Write 3 values == 32bits and check buffer.";
+      test = "Write 3 values == 32bits and check buffer. Data pushed into packet.";
       {
          BatBuffer buf;
-         buf.Write( 3756, 12 );  // 12bits
-         buf.Write( 57483, 16 ); // 16bits
-         buf.Write( 8, 4 );      // 4bits
-         uint32_t data1 = 3756 << ( 32 - 12 );
-         uint32_t data2 = 57483 << ( ( 32 - 12 ) - 16 );
-         uint32_t data3 = 4;
+         buf.Write( 3756, 12 );  // 12bits (0b111010101100)
+         buf.Write( 57483, 16 ); // 16bits (0b1110000010001011)
+         buf.Write( 8, 4 );      // 4bits  (0b1000)
+
+         uint32_t data1 = 3756 << ( 32 - 12 );           // 0b11101010110000000000000000000000
+         uint32_t data2 = 57483 << ( ( 32 - 12 ) - 16 ); // 0b11100000100010110000
+         uint32_t data3 = 4;                             // 0b100
 
          bool result = buf.buffer == 0
                        && buf.packet.size() == 1
                        && buf.packet.back() == data1 | data2 | data3;
          check( result, test );
       }
-      test = "Write 2 values + pad == 32bits and check buffer.";
+      test = "Write 2 values + pad == 32bits and check buffer. Data pushed into packet.";
       {
          BatBuffer buf;
-         buf.Write( 3756, 12 );  // 12bits
-         buf.Write( 57483, 20 ); // 16bits
-         uint32_t data1 = 3756 << ( 32 - 12 );
-         uint32_t data2 = 57483;
+         buf.Write( 3756, 12 );  // 12bits (0b11101010110000000000000000000000)
+         buf.Write( 57483, 20 ); // 16bits (0b11100000100010110000)
+
+         uint32_t data1 = 3756 << ( 32 - 12 );  // 0b11101010110000000000000000000000
+         uint32_t data2 = 57483;                // 0b11100000100010110000
 
          bool result = buf.buffer == 0
                        && buf.packet.size() == 1
@@ -372,11 +366,12 @@ struct Runner : public TestRunner
                        && buf.buffer_size == 32;
          check( result, test );
       }
-      test = "Write 1 values + pad > 32bits and check buffer.";
+      test = "Write 1 values + pad > 32bits and check buffer. Data pushed into packet.";
       {
          BatBuffer buf;
          buf.Write( 15021, 14 + 25 ); // 14bits + 25 bits padding
          uint32_t data1 = 15021 >> 7; // spill 7bits
+
          uint32_t data2 = ( 15021 & uint32_t( pow( 2, 7 ) - 1 ) ) << ( 32 - 7 );
 
          bool result = buf.buffer == data2
@@ -385,12 +380,13 @@ struct Runner : public TestRunner
                        && buf.buffer_size == 32 - 7;
          check( result, test );
       }
-      test = "Write 3 values > 32bits and check buffer.";
+      test = "Write 3 values > 32bits and check buffer and packet.";
       {
          BatBuffer buf;
          buf.Write( 3756, 12 );  // 12bits
          buf.Write( 57483, 16 ); // 16bits
          buf.Write( 9586, 14 );  // 14bits
+
          uint32_t data1 = 3756 << ( 32 - 12 );
          uint32_t data2 = 57483 << ( ( 32 - 12 ) - 16 );
          uint32_t data3 = 9586 >> 10;
@@ -402,20 +398,20 @@ struct Runner : public TestRunner
                        && buf.buffer_size == 22;
          check( result, test );
       }
-      test = "Write string 'Hello' into buffer";
+      test = "Write string 'Hello' into buffer. Check buffer and packet.";
       {
          BatBuffer buf;
          buf.WriteString( "Hello", 5 );
          // H = 72   8bit
          // e = 101  8bit
          // l = 108  8bit
-         // l = 108  8bit
-         // o = 111  8bit
+         // l = 108  8bit  <- 32bits
+         // o = 111  8bit  <- 8bits spilled
 
          uint32_t n = 72;
-         n = ( n << 8 ) | 101;
-         n = ( n << 8 ) | 108;
-         n = ( n << 8 ) | 108;
+                  n = ( n << 8 ) | 101;
+                  n = ( n << 8 ) | 108;
+                  n = ( n << 8 ) | 108;
 
          bool result = buf.packet[0] == n
                        && buf.buffer == 111 << ( 32 - 8 );
@@ -433,12 +429,13 @@ struct Runner : public TestRunner
          // o = 111  8bit
 
          uint32_t n = 72;
-         n = ( n << 8 ) | 101;
-         n = ( n << 8 ) | 108;
-         n = ( n << 8 ) | 108;
+                  n = ( n << 8 ) | 101;
+                  n = ( n << 8 ) | 108;
+                  n = ( n << 8 ) | 108;
 
          bool result = buf.packet[0] == n
-                       && buf.packet[1] == 111 << ( 32 - 8 );
+                       && buf.packet[1] == 111 << ( 32 - 8 )
+                       && buf.packet.size() == 2;
          check( result, test );
       }
 
@@ -458,8 +455,8 @@ struct Runner : public TestRunner
 
          bool result = ( data == val )
                        && !error
-                       && ( buf.buffer == 0 );       // No more data
-         //&& (buf.packet.size() == 0); // Empty packet
+                       && ( buf.buffer == 0 )       // No more data
+                       && (buf.packet.size() == 0); // Empty packet
          check( result, test );
       }
       test = "Switching write to read modes with zero value using 11bit";
@@ -473,7 +470,8 @@ struct Runner : public TestRunner
          bool error;
          buf.Read( data, 11, error );
 
-         bool result = data == val && !error
+         bool result = data == val 
+                       && !error
                        && buf.buffer == 0         // No more data
                        && buf.packet.size() == 0; // Empty packet
          check( result, test );
@@ -485,7 +483,7 @@ struct Runner : public TestRunner
          buf.Write( val, 32 );
          buf.Flush();
          buf.SetReadMode();
-         assert( buf.packet.size() == 0 );
+         assert( buf.packet.size() == 0 );   // Sanity check in debug build!
          uint32_t data;
          bool error;
          buf.Read( data, 32, error );
@@ -493,7 +491,7 @@ struct Runner : public TestRunner
          bool result = ( data == val )
                        && !error
                        && ( buf.buffer_size == 0 )       // No more data
-                       && ( buf.packet.size() == 0 ); // Empty packet
+                       && ( buf.packet.size() == 0 );    // Empty packet
          check( result, test );
       }
       test = "Switching write to read modes with zero value using 32bit";
@@ -508,9 +506,10 @@ struct Runner : public TestRunner
          bool error;
          buf.Read( data, 32, error );
 
-         bool result = data == val && !error
-                       && buf.buffer == 0    // No more data
-                       && buf.packet.size() == 0; // Empty packet
+         bool result = data == val 
+                       && !error
+                       && buf.buffer == 0          // No more data
+                       && buf.packet.size() == 0;  // Empty packet
          check( result, test );
       }
       test = "Read two values from buffer 13, 220";
@@ -606,7 +605,52 @@ struct Runner : public TestRunner
 
          check( result, test );
       }
-      test = "BAT entry 2";
+      test = "BAT entry with max time values plus 1.";
+      {
+         BatBuffer buf;
+         bool error;
+         uint32_t size;
+         share_ft shares;
+         std::string price;
+         time_ft timereport;
+         time_ft time;
+         char condition;
+         side_ft side;
+         char ex;
+         ticker_ft index;
+
+         uint32_t s1 = buf.WriteTicker( 1 );          // index
+         uint32_t s2 = buf.WriteExchange( 'q' );      // ex
+         uint32_t s3 = buf.WriteSide( 3 );            // side B,A,T
+         uint32_t s4 = buf.WriteCondition( 'O' );     // condition
+         uint32_t s5 = buf.WriteTime( 86400000001 );  // time
+         uint32_t s6 = buf.WriteTime( 86400000001 );  // time-report
+         uint32_t s7 = buf.WritePrice( "13.06" );     // price
+         uint32_t s8 = buf.WriteShares( 730 );        // shares
+         buf.Flush();
+         buf.SetReadMode();
+
+         buf.ReadTicker( index );
+         buf.ReadExchance( ex );
+         buf.ReadSide( side );
+         buf.ReadCondition( condition );
+         buf.ReadTime( time );
+         buf.ReadTime( timereport );
+         buf.ReadPrice( price );
+         buf.ReadShares( shares );
+
+         bool result = index == 1
+                       && ex == 'q'
+                       && side == 3
+                       && condition == 'O'
+                       && time == 86400000001
+                       && timereport == 86400000001
+                       && price == "13.06"
+                       && shares == 730;
+
+         check( result, test );
+      }
+      test = "BAT add 2 entries";
       {
          BatBuffer buf;
          bool error;
@@ -676,7 +720,7 @@ struct Runner : public TestRunner
       /**
        * Test Save and load of buffer.
        */
-      test = "BAT single record save and load";
+      test = "BAT single record, file save and load ";
       {
          BatBuffer buf;
          bool error;
@@ -724,7 +768,7 @@ struct Runner : public TestRunner
 
          check( result, test );
       }
-      test = "BAT 2 records save and load";
+      test = "BAT 2 records, file save and load";
       {
          BatBuffer buf;
          bool error;
@@ -926,7 +970,7 @@ struct Runner : public TestRunner
                        && shares[0] == 500;
          check( result, test );
       }
-      test = "BAT 5 records save and load";
+      test = "BAT 5 records, file save and load";
       {
          // STIBX,i,A,0,42180550149,42180550822,27.04,500
          // CNX,i,B,0,42180555115,42180555793,35.87,436
@@ -1063,7 +1107,7 @@ struct Runner : public TestRunner
          check( result, test );
       }
 
-      test = "BAT single record save and load 10,000 times";
+      test = "BAT single record, file save and load 100,000 ticks";
       {
          BatBuffer buf;
          bool error;
@@ -1077,7 +1121,7 @@ struct Runner : public TestRunner
          char ex;
          ticker_ft index;
 
-         int count = 10000;
+         int count = 100000;
 
          for ( int i = 0; i < count; ++i )
          {
