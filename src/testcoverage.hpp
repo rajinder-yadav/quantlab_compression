@@ -73,11 +73,11 @@ struct Runner : public TestRunner
       }
 
       /**
-       * Test class BitBuffer
+       * Test class BatBuffer
        */
       test = "Packing zero value (1 bit)";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 0;
          auto b = buf.pack32( val, 1 ); // 1bit including 1bit padding
          bool result = buf.buffer == 0
@@ -89,7 +89,7 @@ struct Runner : public TestRunner
       }
       test = "Packing value 15 with 1bit pad, testing pad bit is on msb end of value";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 15;             // 4bits
          auto b = buf.pack32( val, 5 ); // 5bits including 1bit padding
          bool result = buf.buffer == 2013265920
@@ -100,7 +100,7 @@ struct Runner : public TestRunner
       }
       test = "Packing value 37 < 32bits";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 37;             // 6bits
          auto b = buf.pack32( val, 6 ); // 6bits
          bool result = buf.buffer == 2483027968
@@ -111,7 +111,7 @@ struct Runner : public TestRunner
       }
       test = "Packing value 37 < 32bits, fixed bits 7";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 37;              // 6bits
          auto b = buf.pack32( val, 7 );  // 7bits including 1bit padding
          bool result = buf.buffer == 37 << ( 32 - 7 )
@@ -122,7 +122,7 @@ struct Runner : public TestRunner
       }
       test = "Packing value 2^32 == 32bits";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = pow( 2, 32 ) - 1; // 32bits
          auto b = buf.pack32( val, 32 );  // 32bits
          bool result = buf.buffer == val
@@ -133,7 +133,7 @@ struct Runner : public TestRunner
       }
       test = "Packing value 2^32 == 32bits, fixed bits 32";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = pow( 2, 32 ) - 1; // 32bits
          auto b = buf.pack32( val, 32 );  // 32bits
          bool result = buf.buffer == val
@@ -145,7 +145,7 @@ struct Runner : public TestRunner
       test = "Packing value 4294945450 with padding of 5 bits";
       {
          // 4294945450 (0b11111111111111111010101010101010) 32bits
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 4294945450;       // 32bits
          auto b = buf.pack32( val, 37 );  // 37bits including 5bits padding
 
@@ -161,7 +161,7 @@ struct Runner : public TestRunner
       test = "Packing value 4294945450 with padding of 9 bits";
       {
          // 4294945450 (0b11111111111111111010101010101010) 32bits
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 4294945450;      // 32bits
          auto b = buf.pack32( val, 41 ); // 41bits including 9bits padding
 
@@ -177,7 +177,7 @@ struct Runner : public TestRunner
       test = "Packing value 4294945450 with padding of 32 bits";
       {
          // 4294945450 (0b11111111111111111010101010101010) 32bits
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 4294945450;      // 32bits
          auto b = buf.pack32( val, 64 ); // 64bits including 9bits padding
 
@@ -193,7 +193,7 @@ struct Runner : public TestRunner
       test = "Packing value 6577, 2863333375 with padding of 32 bits";
       {
          // 2863333375 (0b 1010 1010 1010 1010 1111 1111 1111 1111) 32bits
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 2863333375;
          auto b1 = buf.pack32( 6577, 13 ); // 13bits
          auto b2 = buf.pack32( val, 32 );  // 32bits
@@ -211,7 +211,7 @@ struct Runner : public TestRunner
       test = "Packing value 6577 (15bit), 2863333375 with padding of 32 bits";
       {
          // 2863333375 (0b 1010 1010 1010 1010 1111 1111 1111 1111) 32bits
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 2863333375;
          auto b1 = buf.pack32( 6577, 15 ); // 15bits
          auto b2 = buf.pack32( val, 32 );  // 32bits
@@ -229,7 +229,7 @@ struct Runner : public TestRunner
       test = "Packing value 442, 2863333375 with padding of 32 bits";
       {
          // 2863333375 (0b 1010 1010 1010 1010 1111 1111 1111 1111) 32bits
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 2863333375;
          auto b1 = buf.pack32( 442, 9 );  // 9bits
          auto b2 = buf.pack32( val, 32 );  // 32bits
@@ -247,7 +247,7 @@ struct Runner : public TestRunner
       test = "Packing value 61865903, 43(0b1100010) to create a 32bit value";
       {
          // 61865903 (0b11 1010 1111 1111 1111 1010 1111) 26bits
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 61865903;
          auto b1 = buf.pack32( val, 26 ); // 26bits
          auto b2 = buf.pack32( 43, 6 );   // 6bits
@@ -265,7 +265,7 @@ struct Runner : public TestRunner
       test = "Packing value 61865903, 98(0b1100010) so that 1 bit of zero value spills-over";
       {
          // 61865903 (0b11 1010 1111 1111 1111 1010 1111) 26bits
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 61865903;
          auto b1 = buf.pack32( val, 26 ); // 26bits
          auto b2 = buf.pack32( 98, 7 );   // 7bits
@@ -283,7 +283,7 @@ struct Runner : public TestRunner
       test = "Packing value 61865903, 816(0b1100110000) so that 1 bit of zero value spills-over";
       {
          // 61865903 (0b11 1010 1111 1111 1111 1010 1111)
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 61865903;
          auto b1 = buf.pack32( val, 26 ); // 26bits
          auto b2 = buf.pack32( 816, 10 ); // 10bits
@@ -300,8 +300,8 @@ struct Runner : public TestRunner
       }
       test = "Write string 'Hello' into buffer";
       {
-         BitBuffer buf;
-         buf.Write( "Hello" );
+         BatBuffer buf;
+         buf.WriteString( "Hello", 5 );
          buf.Flush();
          // H = 72   8bit
          // e = 101  8bit
@@ -320,7 +320,7 @@ struct Runner : public TestRunner
       }
       test = "Switching read/write modes with 11bit value";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 1995; // 11bits
          buf.Write( val, 11 );
          buf.Flush();
@@ -334,7 +334,7 @@ struct Runner : public TestRunner
       }
       test = "Switching read/write modes with zero value using 11bit";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 0;
          buf.Write( val, 11 );
          buf.Flush();
@@ -348,7 +348,7 @@ struct Runner : public TestRunner
       }
       test = "Switching read/write modes with 32bit value";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 2863333375; // 11bits
          buf.Write( val, 32 );
          buf.Flush();
@@ -359,10 +359,10 @@ struct Runner : public TestRunner
 
          bool result = data == val && !error;
          check( result, test );
-      }      
+      }
       test = "Switching read/write modes with zero value using 32bit";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          uint32_t val = 0;
          uint32_t bufval = 0;
          buf.Write( val, 32 );
@@ -377,7 +377,7 @@ struct Runner : public TestRunner
       }
       test = "Read two values from buffer 13, 220";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          buf.Write( 13, 4 );     // 4bits
          buf.Write( 220, 8 );    // 8bits
          buf.Flush();
@@ -394,7 +394,7 @@ struct Runner : public TestRunner
       }
       test = "Read two values from buffer 13, 220";
       {
-         BitBuffer buf;
+         BatBuffer buf;
          buf.Write( 220, 8 );    // 8bits
          buf.Write( 13, 4 );     // 4bits
          buf.Write( 1978, 11 );  // 11bits
@@ -418,42 +418,92 @@ struct Runner : public TestRunner
                        && more1 && more2 && more3 && more4 && !more5;
          check( result, test );
       }
-      test = "BAT entry";
+      test = "BAT entry 1";
       {
-         BitBuffer buf;
-         uint32_t s1 = buf.Write(1,16);         // index
-         uint32_t s2 = buf.Write("q");          // ex
-         uint32_t s3 = buf.Write(3,2);          // side B,A,T
-         uint32_t s4 = buf.Write("O");          // condition
-         uint32_t s5 = buf.WriteTime(42180525828);  // time
-         uint32_t s6 = buf.WriteTime(42180526502);  // time-report
-         uint32_t s7 = buf.Write("13.06");          // price
-         uint32_t s8 = buf.WriteSize(730);          // size
+         BatBuffer buf;
+         uint32_t s1 = buf.Write( 1, 16 );           // index
+         uint32_t s2 = buf.WriteString( "q", 1 );    // ex
+         uint32_t s3 = buf.Write( 3, 2 );            // side B,A,T
+         uint32_t s4 = buf.WriteString( "O", 1 );    // condition
+         uint32_t s5 = buf.WriteTime( 42180525828 ); // time
+         uint32_t s6 = buf.WriteTime( 42180526502 ); // time-report
+         uint32_t s7 = buf.WritePrice( "13.06", 5 ); // price
+         uint32_t s8 = buf.WriteSize( 730 );         // size
          buf.Flush();
          buf.SetReadMode();
 
          bool error;
          uint32_t size;
-         buf.ReadSize(size);
+         buf.ReadSize( size );
          cout << size << "\n";
-         std::string price = buf.ReadString(5);
+         std::string price = buf.ReadPrice( 5 );
          cout << price << endl;
          uint64_t timereport;
-         buf.ReadTime(timereport);
+         buf.ReadTime( timereport );
          cout << timereport << "\n";
          uint64_t time;
-         buf.ReadTime(time);
+         buf.ReadTime( time );
          cout << time << "\n";
-         std::string condition = buf.ReadString(1);
+         std::string condition = buf.ReadString( 1 );
          cout << condition << "\n";
          uint32_t side;
-         buf.Read(size,2,error);
+         buf.Read( size, 2, error );
          cout << size << "\n";
-         std::string ex = buf.ReadString(1);
+         std::string ex = buf.ReadString( 1 );
          cout << ex << "\n";
          uint32_t index;
-         buf.Read(index, 16, error);
+         buf.Read( index, 16, error );
          cout << index << "\n";
+      }
+      test = "BAT entry 2";
+      {
+         BatBuffer buf;
+         uint32_t s1 = buf.Write( 3, 16 );            // index
+         uint32_t s2 = buf.WriteString( "r", 1 );     // ex
+         uint32_t s3 = buf.Write( 3, 2 );             // side B,A,T
+         uint32_t s4 = buf.WriteString( "O", 1 );     // condition
+         uint32_t s5 = buf.WriteTime( 42180525828 );  // time
+         uint32_t s6 = buf.WriteTime( 42180526502 );  // time-report
+         uint32_t s7 = buf.WritePrice( "12.56", 6 );  // price
+         uint32_t s8 = buf.WriteSize( 1102 );         // size
+
+         uint32_t r1 = buf.Write( 12, 16 );           // index
+         uint32_t r2 = buf.WriteString( "m", 1 );     // ex
+         uint32_t r3 = buf.Write( 1, 2 );             // ride B,A,T
+         uint32_t r4 = buf.WriteString( "C", 1 );     // condition
+         uint32_t r5 = buf.WriteTime( 42180526503 );  // time
+         uint32_t r6 = buf.WriteTime( 42180526672 );  // time-report
+         uint32_t r7 = buf.WritePrice( "3.09", 6 );   // price
+         uint32_t r8 = buf.WriteSize( 243 );          // size
+         buf.Flush();
+         buf.SetReadMode();
+
+         bool error;
+         uint32_t size;
+
+         for ( int i = 0; i < 2; ++i )
+         {
+            buf.ReadSize( size );
+            cout << size << "\n";
+            std::string price = buf.ReadPrice( 6 );
+            cout << price << endl;
+            uint64_t timereport;
+            buf.ReadTime( timereport );
+            cout << timereport << "\n";
+            uint64_t time;
+            buf.ReadTime( time );
+            cout << time << "\n";
+            std::string condition = buf.ReadString( 1 );
+            cout << condition << "\n";
+            uint32_t side;
+            buf.Read( size, 2, error );
+            cout << size << "\n";
+            std::string ex = buf.ReadString( 1 );
+            cout << ex << "\n";
+            uint32_t index;
+            buf.Read( index, 16, error );
+            cout << index << "\n";
+         }
       }
    }
 };
