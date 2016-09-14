@@ -72,6 +72,21 @@ public:
     */
    void Write( uint32_t val, const int blocks = 0, const int pad = 0 )
    {
+      auto rv = pack32( val, blocks, pad );
+
+      if ( rv.overflow )
+      {
+         packet.push_back( buffer );
+         buffer = 0;
+         buffer_size = 32;
+         pack32( rv.val, blocks, rv.val == 0 ? rv.bits : 0 );
+      }
+      else if ( buffer_size == 0 )
+      {
+         packet.push_back( buffer );
+         buffer = 0;
+         buffer_size = 32;
+      }
    }
 
    void Write( const std::string & val ) {
