@@ -4,7 +4,7 @@
 
 After having a working implementation I had nagging issues with the sample data (ebat.sip) provided. To check it was the data, I wrote 2 separate methods to parse the CSV tick data and both would core at line 200654.
 
-Please see test code I used under folder "checkdata".
+Please see test code I used under folder "csv_filechecker".
 
 
 **Output from using function: checkfile_read1()**
