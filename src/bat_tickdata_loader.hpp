@@ -5,13 +5,14 @@ class BatTickLoader
 {
 public:
 
-   static void CompressData( IProcessMarketData & buffer,
-                             const std::string & infile,
-                             const std::string & outfile,
-                             bool & err )
+   static void Compress( const std::string & infile,
+                         const std::string & outfile,
+                         bool & err )
    {
+      BatBuffer buffer;
       std::ifstream in_fs( infile );
 
+      cout << "Compressing file: " << infile << " ... ";
       if ( !in_fs.is_open() )
       {
          cerr << "Error: File does not exist\n";
@@ -39,20 +40,73 @@ public:
       err = !in_fs.eof();
       in_fs.close();
 
+      std::string symtable( outfile + ".table" );
+      buffer.SaveTable( symtable );
       buffer.Save( outfile );
-      std::string symtable(outfile+".table");
-      buffer.SaveTable(symtable);
+      cout << "Compressed successfully!\n";
+      cout << "Filename: " << outfile << "\n\n";
    }
 
-   static void Inflate( IProcessMarketData & buffer,
-                        const std::string & infile,
+   static void Inflate( const std::string & infile,
                         const std::string & outfile,
                         bool & err )
    {
-      buffer.Load(infile);
-      std::string symtable(infile+".table");
-      buffer.LoadTable(symtable);
+      BatBuffer buffer;
+      buffer.Load( infile );
 
+      std::string symtable_file( infile + ".table" );
+      SymbolTable st;
+      st.LoadTable( symtable_file );
+      auto symtable = st.Table();
+
+      cout << "Inflating file " << infile << " ... ";
+      std::ofstream ofs( "inflated" );
+
+      if ( !ofs.is_open() )
+      {
+         cerr << "Error: Failed to save book to file!\n";
+         err = true;
+         return;
+      }
+
+      bool more;
+      share_ft shares;
+      std::string price;
+      time_ft timereport;
+      time_ft time;
+      char condition;
+      side_ft side;
+      char ex;
+      ticker_ft index;
+
+      do
+      {
+         buffer.ReadTicker( index );
+         buffer.ReadExchance( ex );
+         buffer.ReadSide( side );
+         buffer.ReadCondition( condition );
+         buffer.ReadTime( time );
+         buffer.ReadTime( timereport );
+         buffer.ReadPrice( price );
+         more = buffer.ReadShares( shares );
+
+         char sidetok[] = {'B', 'A', 'T'};
+
+         ofs  << symtable[index] << ","
+              << ex << ","
+              << sidetok[side] << ","
+              << condition << ","
+              << time << ","
+              << timereport << ","
+              << price << ","
+              << shares << endl;
+      }
+      while ( more );
+
+      err = !ofs.good();
+      ofs.close();
+      cout << "Inflated successfully!\n";
+      cout << "Filename: " << outfile << "\n\n";
    }
 
 };
