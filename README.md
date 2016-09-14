@@ -206,8 +206,14 @@ Now let's inflate the compressed file:
 
 You should see a file called "inflated".
 
-Now let's diff the test file with the uncompressed file:
+Now let's count the lines and run a diff the test file with the uncompressed file:
 ```
+wc -l inflated 
+100000 inflated
+
+wc -l testdata 
+100000 testdata
+ 
 diff testdata inflated
 ``` 
 
@@ -217,7 +223,6 @@ Note: You can do the compress, uncompress steps with a single command like this:
 ```
 ./quantlab_compression testdata b
 ```
-
 
 ## Work Log
 
@@ -231,7 +236,7 @@ Waited from reply before starting to work on a solution.
 
 Tuesday 13, 2016
 Started to code at 12:35AM made my first commit.
-Coded for roughly 6 hrs and took a break at 7:32 am
+Coded for roughly 6 hrs and took a break at 7:32 am.
 
 
 Rajinder yadav
