@@ -1,13 +1,24 @@
+//==================================================================================================
+// The MIT License (MIT)
+//
+// Copyright (c) 2016 Rajinder Yadav <rajinder.yadav@hotmail.com>
+//==================================================================================================
+
 #ifndef _field_sizes_hpp_
 #define _field_sizes_hpp_
 
-const size_ft buffer_size    = 32; // bits
-const size_ft ticker_size    = 14; // bits
-const size_ft exchange_size  = 1;  // char(8bits)
-const size_ft side_size      = 1;  // char(8bits)
-const size_ft condition_size = 3;  // bits
-const size_ft time_size      = 37; // bits
-const size_ft price_size     = 7;  // char(8bits)
-const size_ft shared_size    = 14; // bits
+/**
+ * These definitions control the bits size of each filed. 
+ * It controls how data is packed and unpacker from the bit buffer.
+ */
+
+const size_ft BUFFER_CAPACITY = 32; // bits
+const size_ft TICKER_SIZE     = 14; // bits
+const size_ft EXCHANGE_SIZE   = 1;  // char(8bits)
+const size_ft SIDE_SIZE       = 3;  // bits
+const size_ft CONDITION_SIZE  = 1;  // char(8bits)
+const size_ft TIME_SIZE       = 37; // bits
+const size_ft PRICE_SIZE      = 8;  // char(8bits)
+const size_ft SHARE_SIZE      = 20; // bits
 
 #endif // _field_sizes_hpp_

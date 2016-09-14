@@ -1,3 +1,9 @@
+//==================================================================================================
+// The MIT License (MIT)
+//
+// Copyright (c) 2016 Rajinder Yadav <rajinder.yadav@hotmail.com>
+//==================================================================================================
+
 #ifndef _bat_buffer_hpp_
 #define _bat_buffer_hpp_
 
@@ -19,8 +25,8 @@ public:
       {
          ticker_ft index = table.Add( md.ticker );
 
-         uint32_t s1 = WriteTicker( index );            // index
-         uint32_t s2 = WriteExchange( static_cast<exchange_ft>( md.exchange ) );  // ex
+         uint32_t s1 = WriteTicker( index );
+         uint32_t s2 = WriteExchange( static_cast<exchange_ft>( md.exchange ) );
 
          side_ft side;
 
@@ -42,12 +48,12 @@ public:
             assert( false );
          }
 
-         uint32_t s3 = WriteSide( side );               // side B,A,T
-         uint32_t s4 = WriteCondition( static_cast<condition_ft>( md.condition ) ); // condition
-         uint32_t s5 = WriteTime( static_cast<time_ft>( md.time ) );          // time
-         uint32_t s6 = WriteTime( static_cast<time_ft>( md.reptime ) );       // time-report
-         uint32_t s7 = WritePrice( md.price );          // price
-         uint32_t s8 = WriteShares( static_cast<share_ft>( md.size ) );        // size
+         uint32_t s3 = WriteSide( side );
+         uint32_t s4 = WriteCondition( static_cast<condition_ft>( md.condition ) );
+         uint32_t s5 = WriteTime( static_cast<time_ft>( md.time ) );
+         uint32_t s6 = WriteTime( static_cast<time_ft>( md.reptime ) );
+         uint32_t s7 = WritePrice( md.price );
+         uint32_t s8 = WriteShares( static_cast<share_ft>( md.size ) );
 
          /* Debug logging
          cout << index << "  "
@@ -89,7 +95,7 @@ public:
 
    size_ft WriteTime( const time_ft val )
    {
-      // Verify field type, it may have changed
+      // Verify field size, it may have changed
       assert( TIME_SIZE == 32 + 5 );
 
       // Mico-sec since midnight (24 hrs = 8.64e+10 = 37bits)
@@ -116,7 +122,7 @@ public:
     * @param[in] val - String to be packed.
     *
     * @param[in] size - Count of characters to pack string into.
-    *                   Count must be atlest string size.
+    *                   Count must be atleast string size.
     *
     * @return - The number of bits occupied by the string.
     */

@@ -1,3 +1,9 @@
+//==================================================================================================
+// The MIT License (MIT)
+//
+// Copyright (c) 2016 Rajinder Yadav <rajinder.yadav@hotmail.com>
+//==================================================================================================
+
 #ifndef _bat_tick_data_loader_hpp_
 #define _bat_tick_data_loader_hpp_
 
@@ -26,12 +32,24 @@ public:
       while ( in_fs >> s )
       {
          ++lines_read;
+         cout << "Lines processed: " << lines_read << endl;
          MarketData md = DataParser::GetMarketData( s, err );
+
+         if(err) {
+            cerr << "Aboting! Error with input line: " << lines_read << endl;
+            exit(1);
+         }
+  
 
          // Ignore invalid input data
          if ( !err )
          {
             buffer.Compress( std::move( md ), false );
+         }
+         else
+         {
+            cerr << "Compression failed!\n";
+            exit(1);
          }
       } // while
 

@@ -1,3 +1,9 @@
+//==================================================================================================
+// The MIT License (MIT)
+//
+// Copyright (c) 2016 Rajinder Yadav <rajinder.yadav@hotmail.com>
+//==================================================================================================
+
 #ifndef _bit_buffer_hpp_
 #define _bit_buffer_hpp_
 
@@ -75,27 +81,6 @@ public:
       buffer = packet.front();
       packet.pop_front();
       buffer_size = BUFFER_CAPACITY;
-
-#if 1
-#else
-      mode = READ_MODE;
-      buffer_size = packet.back();
-      packet.pop_back();
-
-      buffer = packet.back();
-      packet.pop_back();
-
-      buffer = buffer >> buffer_size;
-      buffer_size = BUFFER_CAPACITY - buffer_size;
-
-      if ( buffer_size == 0 )
-      {
-         buffer = packet.back();
-         packet.pop_back();
-         buffer_size = BUFFER_CAPACITY;
-      }
-
-#endif
    }
 
    /**
@@ -144,7 +129,8 @@ public:
       // bits will be the number of spillover bits.
       bits = bits - buffer_size;
 
-      // BUG FIX : right-shift operator does not left fill with zero is bit size = base type
+      // BUG FIX : right-shift operator does not left fill with zero if bit size = base type
+      // This bug will be implementation specific and is classified as undefined in C++
       if ( bits == 32 )
       {
          buffer = 0;
@@ -175,16 +161,10 @@ public:
     *                    bits     - Count of bits remaining to be read.
     *                    value    - Value read, will be partial if underflow true.
     *
-    * Note: Buffer must be in read ready state, what this mean is empty space
-    *       in the buffer must be on the msb side. When data is being packed
-    *       the empty space will be on the lsb side, so buffer must be right-shifted
-    *       before unpack operation!
+    * Note: Buffer must be in read ready state, the buffer should have been
+    *       flushed once.
     *
     *       (!) Uses SetReadMode() to prepare buffer for reading.
-    *
-    *               <not ready>        <ready>
-    *  Buffer =>  [datat|......]  => [......|data]
-    *               msb | lsb          msb  |lsb
     */
    Status unpack32( buffer_ft & val, const size_ft bitsize )
    {
@@ -202,8 +182,8 @@ public:
          val = ( buffer & mask ) >> ( 32 - bits );
          buffer_size -= bits;
 
-         // Bug with right shift operator for shift equal to bits of value. 
-         if ( bits == 0 )
+         // Bug with left shift operator for shift equal to bits of value. 
+         if ( bits == 32 )
          {
             buffer = 0;
          }
@@ -273,7 +253,6 @@ public:
    {
       // Alert caller of potential bug for reading from empty buffer.
       assert( packet.size() > 0 || buffer_size > 0 );
-      assert( mode == READ_MODE );
 
       if ( buffer_size == 0 )
       {

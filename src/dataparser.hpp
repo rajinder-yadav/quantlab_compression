@@ -1,3 +1,9 @@
+//==================================================================================================
+// The MIT License (MIT)
+//
+// Copyright (c) 2016 Rajinder Yadav <rajinder.yadav@hotmail.com>
+//==================================================================================================
+
 #ifndef _DATAPARSER_HPP_
 #define _DATAPARSER_HPP_
 
@@ -32,13 +38,12 @@ public:
       {
          std::istringstream ss( data );
 
-         err = true;
          std::string tok;
          std::getline( ss, tok, ',' );
 
          if ( ss.fail() )
          {
-            cerr << "Error: Invalid input skipping input\n";
+            cerr << "Aborting! Error: Invalid ticker input skipping input\n";
             return MarketData{};
          }
 
@@ -48,7 +53,7 @@ public:
 
          if ( ss.fail() )
          {
-            cerr << "Error: Invalid input skipping input\n";
+            cerr << "Aborting! Error: Invalid exchange input skipping input\n";
             return MarketData{};
          }
 
@@ -58,7 +63,7 @@ public:
 
          if ( ss.fail() )
          {
-            cerr << "Error: Invalid input skipping input\n";
+            cerr << "Aborting! Error: Invalid side input skipping input\n";
             return MarketData{};
          }
 
@@ -68,7 +73,7 @@ public:
 
          if ( ss.fail() )
          {
-            cerr << "Error: Invalid input skipping input\n";
+            cerr << "Aborting! Error: Invalid condition input skipping input\n";
             return MarketData{};
          }
 
@@ -78,7 +83,7 @@ public:
 
          if ( ss.fail() )
          {
-            cerr << "Error: Invalid input skipping input\n";
+            cerr << "Aborting! Error: Invalid time input skipping input\n";
             return MarketData{};
          }
 
@@ -88,7 +93,7 @@ public:
 
          if ( ss.fail() )
          {
-            cerr << "Error: Invalid input skipping input\n";
+            cerr << "Aborting! Error: Invalid reptime input skipping input\n";
             return MarketData{};
          }
 
@@ -98,7 +103,7 @@ public:
 
          if ( ss.fail() )
          {
-            cerr << "Error: Invalid input skipping input\n";
+            cerr << "Aborting! Error: Invalid price input skipping input\n";
             return MarketData{};
          }
 
@@ -108,17 +113,16 @@ public:
 
          if ( ss.fail() )
          {
-            cerr << "Error: Invalid input skipping input\n";
+            cerr << "Aborting! Error: Invalid size input skipping input\n";
             return MarketData{};
          }
 
          size = std::stoul( tok );
-
       }
       catch ( ... )
       {
          err = true;
-         cerr << "Error: Invalid input skipping input\n";
+         cerr << "Aborting! Error: Invalid input skipping input\n";
          return MarketData{};
       }
 

@@ -1,3 +1,9 @@
+//==================================================================================================
+// The MIT License (MIT)
+//
+// Copyright (c) 2016 Rajinder Yadav <rajinder.yadav@hotmail.com>
+//==================================================================================================
+
 #include <iostream>
 #include <iomanip>
 #include <map>
@@ -8,6 +14,8 @@
 #include <sstream>
 #include <algorithm>
 #include <cassert>
+#include <regex>
+#include <iterator>
 
 #include "fieldtypes.hpp"
 #include "fieldsizes.hpp"
@@ -54,7 +62,7 @@ using std::endl;
  */
 int main( int argc, char * argv[] )
 {
-   if ( argc < 2 )
+   if ( argc < 3 )
    {
       cout << "\nAuthor: Rajinder Yadav <rajinder.yadav@hotmail.com>\n\n"
            << "Program Arguments: quantlab_compression <filename> <mode>\n\n"
@@ -70,7 +78,7 @@ int main( int argc, char * argv[] )
 
    bool error;
 
-   const char c = argv[1][0];
+   const char c = argv[2][0];
 
    if ( c == 't' || c == 'a' )
    {
