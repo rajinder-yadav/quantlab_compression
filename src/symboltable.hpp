@@ -3,6 +3,7 @@
 
 using std::cout;
 using std::endl;
+using std::cerr;
 
 class SymbolTable
 {
@@ -16,17 +17,20 @@ public:
    {
    }
 
-   void Add( const std::string & s )
+   uint16_t Add( const std::string & s )
    {
       auto r = _table.find( s );
 
       if ( r == _table.end() )
       {
          _table.insert( std::make_pair( s, _index++ ) );
+         return _index - 1;
       }
+
+      return r->second;
    }
 
-   std::vector<std::string> Table()
+   std::deque<std::string> Table()
    {
       std::priority_queue<SymbolNode> order;
 
@@ -35,7 +39,7 @@ public:
          order.push( SymbolNode( v.second, v.first ) );
       }
 
-      std::vector<std::string> lookup;
+      std::deque<std::string> lookup;
 
       while ( !order.empty() )
       {
@@ -45,7 +49,47 @@ public:
       } // while
 
       return lookup;
+   }
 
+   void LoadTable( const std::string & filename )
+   {
+      std::ifstream in_fs( filename );
+
+      if ( !in_fs.is_open() )
+      {
+         cerr << "Error: File does not exist\n";
+         return;
+      }
+
+      std::string s;
+      std::size_t lines_read = 0;
+
+      _table.clear();
+      _index = 0;
+
+      while ( in_fs >> s )
+      {
+         Add( s );
+      }
+   }
+
+   void SaveTable( const std::string & filename )
+   {
+      std::ofstream ofs( filename );
+
+      if ( !ofs.is_open() )
+      {
+         cerr << "Error: Failed to save book to file!\n";
+         return;
+      }
+
+      auto symtable = Table();
+      for ( auto v : symtable )
+      {
+         ofs << v << "\n";
+      }
+
+      ofs.close();
    }
 };
 
