@@ -6,8 +6,14 @@ using std::endl;
 
 class SymbolTable
 {
+   std::map< std::string, uint16_t > _table;
+   uint16_t _index;
+
+   uint16_t _index;  
 public:
    SymbolTable()
+      : _table{}
+      , _index{}
    {
    }
 
