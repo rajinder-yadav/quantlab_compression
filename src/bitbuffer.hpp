@@ -102,6 +102,12 @@ public:
     */
    void Flush()
    {
+      if ( buffer_size < 32 )
+      {
+         packet.push_back( buffer );
+         buffer = 0;
+         buffer_size = 32;
+      }
    }
 
 };
