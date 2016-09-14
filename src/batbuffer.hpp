@@ -5,21 +5,47 @@ class BatBuffer : public BitBuffer
 {
 public:
 
-   uint32_t WriteTime( uint64_t val )
+   size_ft WriteTicker( const ticker_ft index )
    {
+      return Write( index, ticker_size );
+   }
+
+   size_ft WriteExchange( const exchange_ft ex )
+   {
+      return Write( static_cast<uint32_t>( ex ), 8 );
+   }
+
+   size_ft WriteSide( const side_ft side )
+   {
+      return Write( side, side_size );
+   }
+
+   size_ft WriteCondition( const condition_ft cond )
+   {
+      return Write( static_cast<uint32_t>( cond ), 8 );
+   }
+
+   size_ft WriteTime( const time_ft val )
+   {
+      // Verify field type, it may have changed
+      assert( time_size == 32 + 5 );
+
       // Mico-sec since midnight (24 hrs = 8.64e+10 = 37bits)
-      uint32_t hi = val >> 32;
-      uint32_t lo = static_cast<uint32_t>( val );
+      buffer_ft hi = val >> 32;
+      buffer_ft lo = static_cast<buffer_ft>( val );
       Write( hi, 5 );
       Write( lo, 32 );
       return 37;
    }
-   
-   uint32_t WriteSize( uint32_t val )
+
+   uint32_t WritePrice( const std::string & val )
    {
-      // Max 10000 (14bits) ???
-      Write( val, 14 );
-      return 14;
+      return WriteString( val, price_size );
+   }
+
+   size_ft WriteShares( const share_ft val )
+   {
+      return Write( val, share_size );
    }
 
    /**
@@ -32,83 +58,123 @@ public:
     *
     * @return - The number of bits occupied by the string.
     */
-   uint32_t WriteString( const std::string & val, const int size )
+   uint32_t WriteString( const std::string & val, const size_ft size )
    {
       assert( size >= val.size() );
-      const int pad = size - val.size();
+      size_ft pad = size - val.size();
 
-      for ( int i = 0; i < pad; ++i )
+      for ( size_ft i = 0; i < pad; ++i )
       {
-         Write( uint32_t( uint32_t( ' ' ) ), 8 );
+         Write( static_cast<uint32_t>( uint32_t( ' ' ) ), 8 );
       }
 
       for ( char c : val )
       {
-         Write( uint32_t( c ), 8 );
+         Write( static_cast<uint32_t>( c ), 8 );
       }
 
       return size > val.size() ? size : val.size();
    }
 
-   uint32_t WritePrice( const std::string & val, const int size )
-   {
-      WriteString( val, size );
-   }
-
-   std::string ReadString( const int count )
+   bool ReadTicker( ticker_ft & ticker )
    {
       bool error;
-      std::string s;
-      uint32_t ch;
-
-      for ( int i = 0; i < count; ++i )
-      {
-         Read( ch, 8, error );
-         s = char( ch ) + s;
-      }
-
-      return s;
+      buffer_ft tmp;
+      bool more = Read( tmp, ticker_size, error );
+      ticker = static_cast<ticker_ft>( tmp );
+      return more;
    }
 
-   std::string ReadPrice( const int count )
+   bool ReadExchance( exchange_ft & exchange )
+   {
+      std::string s;
+      bool more = ReadString( s, exchange_size );
+      exchange = s[0];
+      return more;
+   }
+
+   bool ReadSide( side_ft & side )
    {
       bool error;
+      buffer_ft tmp;
+      bool more = Read( tmp, side_size, error );
+      side = static_cast<side_ft>( tmp );
+      return more;
+   }
+
+   bool ReadCondition( condition_ft & cond )
+   {
       std::string s;
-      uint32_t ch;
+      bool more = ReadString( s, condition_size );
+      cond = s[0];
+      return more;
+   }
 
-      for ( int i = 0; i < count; ++i )
+   bool ReadTime( time_ft & val )
+   {
+      // Verify field type, it may have changed
+      assert( time_size == 32 + 5 );
+      bool error1;
+      bool error2;
+      bool more = false;
+      buffer_ft tmp;
+
+      more = Read( tmp, 32, error1 );
+      assert( more );
+      val = static_cast<buffer_ft>( tmp );
+      more = Read( tmp, 5, error2 );
+      time_ft hi = static_cast<buffer_ft>( tmp );
+      val = ( hi << 32 ) | val;
+      // error = error1 | error2;
+      return more;
+   }
+
+   bool ReadPrice( std::string & price )
+   {
+      bool error;
+      bool more = false;
+      price.clear();
+      buffer_ft ch;
+
+      for ( size_ft i = 0; i < price_size; ++i )
       {
-         Read( ch, 8, error );
+         more = Read( ch, 8, error );
 
-         if ( ch == char( ' ' ) )
+         if ( ch == static_cast<char>( ' ' ) )
          {
             continue;
          }
 
-         s = char( ch ) + s;
+         price = static_cast<char>( ch ) + price;
       }
 
-      return s;
+      return more;
    }
 
-   bool ReadSize( uint32_t & val )
+
+   bool ReadShares( share_ft & val )
    {
       bool error;
-      Read( val, 14, error );
-      return error;
+      buffer_ft tmp;
+      bool more = Read( tmp, share_size, error );
+      val = static_cast<share_ft>( tmp );
+      return more;
    }
 
-   bool ReadTime( uint64_t & val )
+   bool ReadString( std::string & s, const size_ft count )
    {
       bool error;
-      uint32_t tmp;
+      bool more = false;
+      s.clear();
+      uint32_t ch;
 
-      Read( tmp, 32, error );
-      val = tmp;
-      Read( tmp, 5, error );
-      uint64_t hi = tmp;
-      val = ( hi << 32 ) | val;
-      return error;
+      for ( int i = 0; i < count; ++i )
+      {
+         more = Read( ch, 8, error );
+         s = static_cast<char>( ch ) + s;
+      }
+
+      return more;
    }
 
 };
