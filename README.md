@@ -1,99 +1,73 @@
 # Quantlab Compression Assignment
 
-## Problems Encountered
+## Note About Testing
 
-After having a working implementation I had nagging issues with the sample data (ebat.zip) provided. To check it was a file corruption, I wrote 2 separate methods to parse the CSV tick data and both would core at line 200654.
+1. I developed on a 64-bits Linux system and coded for a 64bit system.
 
-Please see test code I used under folder "csv_filechecker".
-
-
-**Output from using function: checkfile_read1()**
-```
-200646 NQH8,F,B,0,60666897,60666897,1781,1
-200647 NQH8,F,A,0,60666897,60666897,1788,6
-200648 6AH8,F,A,0,60666908,60666908,90.53,3
-200649 6AM8,F,A,0,60666922,60666922,89.44,1
-200650 CLH8,F,B,0,60667248,60667248,95.9,1
-200651 CLH8,F,A,0,60667248,60667248,95.9,1
-200652 RBH8-RBJ8,F,B,0,60667519,60667519,-13.65,50
-200653 RBH8-RBJ8,F,A,0,60667519,60667519,-13,1
-Segmentation fault (core dumped)
-```
-
-**Output from using function: checkfile_read2()**
-```
-200647 NQH8,F,A,0,60666897,60666897,1788,6
-200648 6AH8,F,A,0,60666908,60666908,90.53,3
-200649 6AM8,F,A,0,60666922,60666922,89.44,1
-200650 CLH8,F,B,0,60667248,60667248,95.9,1
-200651 CLH8,F,A,0,60667248,60667248,95.9,1
-200652 RBH8-RBJ8,F,B,0,60667519,60667519,-13.65,50
-200653 RBH8-RBJ8,F,A,0,60667519,60667519,-13,1
-200654 CL:C1
-Error: Invalid exchange input skipping input
-```
-
-What I think is going on is that the files provided were created and zipped on a Windows system. I am using Linux and possibly two things are at play.
-
-1. unzip utility is doing something odd, causing corruption?
-
-2. End of line, Windows uses "\r\n" vs Unix newline "\n", will cause diff to fail.
-
-Only after using dos2unix I was able to use the 1st 100,000 lines from ebat.csv, still cores at same line.
-
-I did the following with the input file to make use some of it:
+1. I had to convert the 'ebat.csv' file to UNIX end of line format as shown below:
 
 ```
 unzip ebat.zip
 dos2unix ebat.csv
-head -n 100000 ebat.csv > testdata
 ```
 
-So I used the file "testdata" as my actual test sample data which contains the first 1000,000 lines and has been provided with this project (see file testdata).
+After running the compression test, when a diff is done, it only differs on the last line, this is from a missing "end of line" on the input file, as shown below:
 
+```
+$ diff ebat.csv inflated 
+400000c400000
+< QHH8,F,A,0,3358199,3358199,266,3
+\ No newline at end of file
+---
+> QHH8,F,A,0,3358199,3358199,266,3
+```
+Note: All field values are the same.
 
 ## Assumptions
 
- I made the following assumptions for the tick fields:
+ I made the following assumptions for encoding the tick fields:
 
 * ticker - Max unique ticker symbols 10,000.
 
 * exchange - 8 bits could be smaller if I knew all possible values.
 
-* side - 2bits Assume only values are: Bid, Ask, Trade.
+* side - 2bits, assume only values are: Bid, Ask, Trade.
 
 * time - Mico-sec since midnight, 24 hrs = 8.64e+10 used 37bits.
 
 * reptime - Played safe, didn't use a delta (reptime - time) as I don't know the max time gap.
 
-* price - Assume max 8 digits including the decimal point.
+* price - Assumed a decimal precision of 12 digits (is configurable).
 
-* size  - Assumed Max shares 1048576 (20 bits).
+* size  - Assumed max shares 1048576 (20 bits).
 
-For configuration, I used constant defined in file fieldsizes.hpp and their types in fieldtypes.hpp
+## Configuration
+
+* Field sizes are defined in file fieldsizes.hpp
+* Field types are defined in file fieldtypes.hpp
 
 ## Compression Ratio
 
-With the conservative values, the compression ratio is: 1.9263258666505005, almost 50% compression. 
+With the conservative values, the compression ratio is: 1.7620665330300422, a 76% compression ratio. 
 
 Here are the files size (below) I used to calculate the ratio.
 
 ```
--rw-rw-r-- 1 yadav yadav  4575702 Sep 13 17:41 testdata
--rw-rw-r-- 1 yadav yadav  2375000 Sep 14 06:20 compressed
--rw-rw-r-- 1 yadav yadav      352 Sep 14 06:20 compressed.table
+-rw-rw-r-- 1 yadav yadav  9500000 Sep 16 04:52 compressed
+-rw-rw-r-- 1 yadav yadav     6376 Sep 16 04:52 compressed.table
+-rw-rw-r-- 1 yadav yadav 16750867 Sep 16 04:52 ebat.csv
 ```
 ## Design
 
-I took time to think about how to implement a flexible design that with minor changes could be tweaked to get improvements on the compression ratio as well allow for flexibility of code changes.
+I took time to think about how to implement a flexible design that with minor changes could be tweaked to get improvements on the compression ratio as well as allow for flexibility of code changes.
 
-To compress the ticker which is both variable in size as contains duplicates in the tick data, I decided to use an indexed symbol table.
+To compress the ticker which is both variable in size as contains duplicate names, I decided to use an indexed symbol table.
 
-1. First time symbol is discovered, it's added to SymbolTable and a unique index is generated to be bit packed during compression.
+* First time symbol is discovered, it's added to SymbolTable and a unique index is generated to be bit packed during compression.
 
-2. Each time an existing symbol is detected, it's previous index values is used and bit packed.
+* Each time an existing symbol is detected, it's previous index values is used and bit packed.
 
-During the uncompress stage, Symbols table is used to fetch the ticker (symbol) name.
+During the uncompress stage, the symbol table is used to fetch the ticker (symbol) name.
 
 For field 'side' I was able to use 2 bits to encode the data.
 
@@ -101,13 +75,15 @@ For field 'side' I was able to use 2 bits to encode the data.
 * bit 0x01 - (A)sk
 * bit 0x02 - (T)rade
 
-3. I may have been able to reduce the size for field 'reptime' by saving it's delta from the 'time' field, but played it safe to just write it out.
+I may have been able to reduce the size for field 'reptime' by saving it's delta from the 'time' field, but played it safe to just write it out.
 
-  1. Initially I thought to use a std::bitset but it proved limited is API support.
+## Bit Packing
 
-  2. So I thought maybe I will use a Packet of a fixed bit size, but then there would be wasted unused bits.
+  1. Initially I thought to use std::bitset, but it proved limited in API support.
 
-  3. Next I considered using a class with bit fields to save the data.
+  2. I looked at using a Packet of a fixed bit size, but then there would be wasted padding bits.
+
+  3. I also considered using a class with bit fields to save the data.
 
 ```C++
 // Size of class is 1 8bits, both a1 and a2 saved to same char field!
@@ -117,16 +93,16 @@ class A {
 };
 ```
 
+The design I chose for bit packing was to go with a bit buffer.
+
 ### Bit Buffer
-The design I decided with was to code up a BitBuffer that works like a queue. You push values with its bit size and the BitBuffer class takes care up packing the data. This seem to be the best and most flexible solution considered above.
+The BitBuffer works like a queue, value are pushed from one end and read from the other end and no padding is required. The BitBuffer class takes cares of encoding a value with a bit representation. This seems to be the optimal design that has flexibility built in.
 
- For both time fields, I decided against packing a double value into a 32bit aligned buffer. I was not sure if data loss would occur converting between a double and two 32bit words. This is one area of improvement that could be made with more research and testing. So I opted for a conservative approach of using a string of max size 8 characters.
+## Other Design Notes
 
-## Thoughts
+I've kept the design flexible by allowing the field bit size to be configurable. If the csv input size change, it should be relatively easy to get the code working again.
 
-My code could break due to the assumption I've made about field bit sizes to go with. However I've kept the design flexible by allowing the field bit size to be configurable and go with BitBuffer which provides a dense packing of bits (no empty padding needed for alignment, etc.).
-
-I wasn't able to test with the entire input test file (ebat.csv) due to odd corruption, so there might be possible errors due to field sizing that I did not catch. I'm very confident I would be able to tackle these errors in a short amount of time. I also made use of defensive programming and added assert which would be tripped in debug mode, this is both good for the API User as well as implementor.
+I also made use of defensive programming and added assert which would be tripped in debug mode, this is both good for the API User as well as implementor.
 
 ## Building The Project
 I used CMake to build my project which is a cross platform makefile generator, site: https://cmake.org/
@@ -138,15 +114,16 @@ git clone https://github.com/rajinder-yadav/quantlab_compression.git
 
 cd quantlab_compression
 mkdir build
-cp testdata build/
+cp ebat.csv build/
 cd build
+dos2unix ebat.csv
 cmake -G "Unix Makefiles" -D CMAKE_BUILD_TYPE="Release" ../src
 make
 ```
 
 This should start the build to create a release build of program "quantlab_compression".
 
-On Windows change the above cmake command to:
+For Windows, change the above cmake command to:
 ```
 cmake -G "NMake Makefiles" -D CMAKE_BUILD_TYPE="Release" ../src
 ```
@@ -180,19 +157,17 @@ Everything should pass!
 
 Now to test compression, type:
 ```
-./quantlab_compression testdata c
+./quantlab_compression ebat.csv c
 ```
 
 You should see something like the following output:
 ```
-Lines processed: 99998
-Lines processed: 99999
-Lines processed: 100000
+Lines processed: 399997
+Lines processed: 399998
+Lines processed: 399999
+Lines processed: 400000
 Compressed successfully!
 Filename: compressed
-
-Inflating file compressed ... Inflated successfully!
-Filename: inflated
 ```
 
 There should be two files: compressed and compressed.table
@@ -200,29 +175,42 @@ There should be two files: compressed and compressed.table
 Now let's inflate the compressed file:
 ```
 ./quantlab_compression compressed i
+
+Inflating file compressed ... Inflated successfully!
+Filename: inflated
 ```
 
 You should see a file called "inflated".
 
-Now let's count the lines and run a diff the test file with the uncompressed file:
-```
-wc -l inflated 
-100000 inflated
+Now let's count the lines and run a diff to test input file against the uncompressed file:
 
-wc -l testdata 
-100000 testdata
- 
-diff testdata inflated
+**The difference is due to file 'ebar.csv' missing an 'end of line' on the last line!**
+
+```
+$ wc -l ebat.csv 
+399999 ebat.csv
+
+$ wc -l inflated 
+400000 inflated
+
+
+$ diff ebat.csv inflated 
+400000c400000
+< QHH8,F,A,0,3358199,3358199,266,3
+\ No newline at end of file
+---
+> QHH8,F,A,0,3358199,3358199,266,3
+
 ``` 
 
-You should see no output since there are no differences. To view the inflated file type, "cat inflated".
+To view the inflated file type, "less inflated".
 
 Note: You can do the compress, uncompress steps with a single command like this:
 ```
-./quantlab_compression testdata b
+./quantlab_compression ebat.csv b
 ```
 
-## Work Log
+# Work Log
 
 Sunday 11, 2016
 Spent time considering design ideas and basic research (1 hrs).
@@ -235,6 +223,11 @@ Waited from reply before starting to work on a solution.
 Tuesday 13, 2016
 Started to code at 12:35AM made my first commit.
 Coded for roughly 6 hrs and took a break at 7:32 am.
+
+Thursday 15, 2016
+Code for 1.5 hours, fixed CSV line read to account for spaces in the ticker name.
+Updated README
+Update decompress code to stream to file rather than load entire file it memory.
 
 
 Rajinder yadav

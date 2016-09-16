@@ -16,7 +16,7 @@ public:
                          bool & err )
    {
       BatBuffer buffer;
-      buffer.OpenStream( outfile );
+      buffer.OpenWriteStream( outfile );
 
       std::ifstream in_fs( infile );
 
@@ -32,7 +32,7 @@ public:
       std::string s;
       std::size_t lines_read = 0;
 
-      while ( in_fs >> s )
+      while ( std::getline( in_fs, s ) )
       {
          ++lines_read;
          cout << "Lines processed: " << lines_read << endl;
@@ -63,7 +63,7 @@ public:
       } // while
 
       buffer.Compress( MarketData{}, true );
-      buffer.CloseStream( err );
+      buffer.CloseWriteStream( err );
       in_fs.close();
 
       std::string symtable( outfile + ".table" );
@@ -77,61 +77,7 @@ public:
                         bool & err )
    {
       BatBuffer buffer;
-      buffer.Load( infile );
-
-      std::string symtable_file( infile + ".table" );
-      SymbolTable st;
-      st.LoadTable( symtable_file );
-      auto symtable = st.Table();
-
-      cout << "Inflating file " << infile << " ... ";
-      std::ofstream ofs( "inflated" );
-
-      if ( !ofs.is_open() )
-      {
-         cerr << "Error: Failed to save book to file!\n";
-         err = true;
-         return;
-      }
-
-      bool more;
-      share_ft shares;
-      std::string price;
-      time_ft timereport;
-      time_ft time;
-      char condition;
-      side_ft side;
-      char ex;
-      ticker_ft index;
-
-      do
-      {
-         buffer.ReadTicker( index );
-         buffer.ReadExchance( ex );
-         buffer.ReadSide( side );
-         buffer.ReadCondition( condition );
-         buffer.ReadTime( time );
-         buffer.ReadTime( timereport );
-         buffer.ReadPrice( price );
-         more = buffer.ReadShares( shares );
-
-         char sidetok[] = {'B', 'A', 'T'};
-
-         ofs  << symtable[index] << ","
-              << ex << ","
-              << sidetok[side] << ","
-              << condition << ","
-              << time << ","
-              << timereport << ","
-              << price << ","
-              << shares << endl;
-      }
-      while ( more );
-
-      err = !ofs.good();
-      ofs.close();
-      cout << "Inflated successfully!\n";
-      cout << "Filename: " << outfile << "\n\n";
+      buffer.InflateFile( infile, outfile, err );
    }
 
 };

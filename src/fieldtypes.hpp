@@ -12,7 +12,7 @@ typedef char      exchange_ft;
 typedef uint8_t   side_ft;
 typedef char      condition_ft;
 typedef uint64_t  time_ft;
-typedef uint32_t  price_ft;
+typedef double    price_ft;
 typedef uint32_t  share_ft;
 typedef uint32_t  size_ft;
 typedef uint32_t  buffer_ft;

@@ -110,7 +110,14 @@ public:
 
    uint32_t WritePrice( const std::string & val )
    {
-      return WriteString( val, PRICE_SIZE );
+      price_ft price = std::stod( val );
+      uint64_t * ptr1 = reinterpret_cast<uint64_t *>( &price );
+      uint32_t high = reinterpret_cast<uint64_t>( *ptr1 ) >> 32;
+      uint32_t low  = static_cast<uint32_t>( reinterpret_cast<uint64_t>( *ptr1 ) );
+
+      Write( high, 32 );
+      Write( low, 32 );
+      return PRICE_SIZE;
    }
 
    size_ft WriteShares( const share_ft val )
@@ -201,23 +208,27 @@ public:
 
    bool ReadPrice( std::string & price )
    {
-      bool error;
+      // Verify field type, it may have changed
+      assert( PRICE_SIZE == 64 );
+      bool error1;
+      bool error2;
       bool more = false;
-      price.clear();
-      buffer_ft ch;
+      buffer_ft tmp;
 
-      for ( size_ft i = 0; i < PRICE_SIZE; ++i )
-      {
-         more = Read( ch, 8, error );
+      more = Read( tmp, 32, error1 );
+      assert( more );
+      uint64_t hi = static_cast<uint64_t>( tmp );
+      more = Read( tmp, 32, error2 );
+      uint64_t lo = static_cast<uint64_t>( tmp );
+      uint64_t val = ( hi << 32 ) | lo;
 
-         if ( ch == static_cast<char>( ' ' ) )
-         {
-            continue;
-         }
+      price_ft * ptr = reinterpret_cast<price_ft *>( &val );
 
-         price += static_cast<char>( ch );
-      }
+      std::ostringstream ss;
+      ss << std::setprecision( PRICE_PRECISION ) << static_cast<price_ft>( *ptr );
+      price = ss.str();
 
+      // error = error1 | error2;
       return more;
    }
 
@@ -247,14 +258,14 @@ public:
       return more;
    }
 
-   void OpenStream( const std::string & filename )
+   void OpenWriteStream( const std::string & filename )
    {
       fstreamer.open( filename, std::ios::binary );
 
       if ( !fstreamer.good() )
       {
          cerr << "Aborting! Unable to open file for streaming.\n";
-         assert(false);
+         assert( false );
          exit( 1 );
       }
    }
@@ -272,7 +283,7 @@ public:
       }
    }
 
-   void CloseStream( bool & error )
+   void CloseWriteStream( bool & error )
    {
       WriteStream();
       error = !fstreamer.good();
@@ -315,6 +326,151 @@ public:
 
          SetReadMode();
       }
+   }
+
+   void InflateFile( const std::string & infile,
+                     const std::string & outfile,
+                     bool & err )
+   {
+      cout << "Inflating file " << infile << " ... " << std::flush;
+
+      // Load symbol table
+      std::string symtable_file( infile + ".table" );
+      SymbolTable st;
+      st.LoadTable( symtable_file );
+      auto symtable = st.Table();
+
+      std::ofstream ofs( outfile );
+
+      // Prepare inflated file for decompressing to
+      if ( !ofs.is_open() )
+      {
+         cerr << "Error: Failed to save book to file!\n";
+         err = true;
+         return;
+      }
+
+      bool more;
+      share_ft shares;
+      std::string price;
+      time_ft timereport;
+      time_ft time;
+      char condition;
+      side_ft side;
+      char ex;
+      ticker_ft index;
+
+      // Prepare reading of compressed binary file
+      std::ifstream f( infile, std::ios::binary );
+      std::size_t lines_read = 0;
+
+      buffer_ft readbuffer_cache = 0;
+      size_ft readbuffer_size_cache = 0;
+      bool first_read = true;
+
+      if ( f.good() )
+      {
+         packet.clear();
+         buffer_ft buf;
+
+         while ( true )
+         {
+            ++lines_read;
+            mode = WRITE_MODE;
+            f.read( reinterpret_cast<char *>( &buf ), sizeof( buffer_ft ) );
+
+            if ( !f.good() )
+            {
+               break;
+            }
+
+            packet.push_back( buf );
+
+            if ( lines_read > 0 && ( lines_read % 50 == 0 ) && packet.size() > 7 )
+            {
+               buffer_ft buffer_cache     = buffer;
+               size_ft  buffer_size_cache = buffer_size;
+
+               if ( first_read )
+               {
+                  SetReadMode();
+                  first_read = false;
+               }
+               else
+               {
+                  mode = READ_MODE;
+                  buffer = readbuffer_cache;
+                  buffer_size = readbuffer_size_cache;
+               }
+
+               for ( int i = 0; i < packet.size(); ++i )
+               {
+                  ReadTicker( index );
+                  ReadExchance( ex );
+                  ReadSide( side );
+                  ReadCondition( condition );
+                  ReadTime( time );
+                  ReadTime( timereport );
+                  ReadPrice( price );
+                  ReadShares( shares );
+
+                  char sidetok[] = {'B', 'A', 'T'};
+
+                  ofs  << symtable[index] << ","
+                       << ex << ","
+                       << sidetok[side] << ","
+                       << condition << ","
+                       << time << ","
+                       << timereport << ","
+                       << price << ","
+                       << shares << endl;
+               }
+
+               readbuffer_cache      = buffer;
+               readbuffer_size_cache = buffer_size;
+
+               buffer      = buffer_cache;
+               buffer_size = buffer_size_cache;
+            }
+         } // while
+
+         mode = READ_MODE;
+         buffer = readbuffer_cache;
+         buffer_size = readbuffer_size_cache;
+
+         if ( packet.size() > 0 )
+         {
+            do
+            {
+               ReadTicker( index );
+               ReadExchance( ex );
+               ReadSide( side );
+               ReadCondition( condition );
+               ReadTime( time );
+               ReadTime( timereport );
+               ReadPrice( price );
+               more = ReadShares( shares );
+
+               char sidetok[] = {'B', 'A', 'T'};
+
+               ofs  << symtable[index] << ","
+                    << ex << ","
+                    << sidetok[side] << ","
+                    << condition << ","
+                    << time << ","
+                    << timereport << ","
+                    << price << ","
+                    << shares << endl;
+            }
+            while ( more );
+         }
+
+      }
+
+      err = !ofs.good();
+      ofs.close();
+      cout << "Inflated successfully!\n";
+      cout << "Filename: " << outfile << "\n\n";
    }
 
    void SaveTable( const std::string & filename )

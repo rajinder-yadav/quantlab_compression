@@ -73,7 +73,7 @@ public:
       _table.clear();
       _index = 0;
 
-      while ( in_fs >> s )
+      while ( std::getline( in_fs, s ) )
       {
          Add( s );
       }

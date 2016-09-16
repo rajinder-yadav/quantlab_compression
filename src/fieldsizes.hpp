@@ -18,7 +18,9 @@ const size_ft EXCHANGE_SIZE   = 1;  // char(8bits)
 const size_ft SIDE_SIZE       = 2;  // bits
 const size_ft CONDITION_SIZE  = 1;  // char(8bits)
 const size_ft TIME_SIZE       = 37; // bits
-const size_ft PRICE_SIZE      = 8;  // char(8bits)
+const size_ft PRICE_SIZE      = 64; // bits
 const size_ft SHARE_SIZE      = 20; // bits
+
+const int PRICE_PRECISION     = 12; // digits
 
 #endif // _field_sizes_hpp_

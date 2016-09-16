@@ -36,88 +36,88 @@ public:
 
       try
       {
-         std::istringstream ss( data );
+         char tick_csv[1000];
+         strcpy(tick_csv, data.c_str()); 
+         std::string seperator( "," );
+         char * token = std::strtok( tick_csv, seperator.c_str() );
 
-         std::string tok;
-         std::getline( ss, tok, ',' );
-
-         if ( ss.fail() )
+         if ( !token )
          {
             cerr << "Aborting! Error: Invalid ticker input skipping input\n";
             return MarketData{};
          }
 
-         ticker = tok;
+         ticker = std::string(token);
 
-         std::getline( ss, tok, ',' );
+         token = std::strtok( NULL, seperator.c_str() );
 
-         if ( ss.fail() )
+         if ( !token )
          {
             cerr << "Aborting! Error: Invalid exchange input skipping input\n";
             return MarketData{};
          }
 
-         exchange = static_cast<char>( tok[0] );
+         exchange = static_cast<char>( *token );
 
-         std::getline( ss, tok, ',' );
+         token = std::strtok( NULL, seperator.c_str() );
 
-         if ( ss.fail() )
+         if ( !token )
          {
             cerr << "Aborting! Error: Invalid side input skipping input\n";
             return MarketData{};
          }
 
-         side = static_cast<char>( tok[0] );
+         side = static_cast<char>( *token );
 
-         std::getline( ss, tok, ',' );
+         token = std::strtok( NULL, seperator.c_str() );
 
-         if ( ss.fail() )
+         if ( !token )
          {
             cerr << "Aborting! Error: Invalid condition input skipping input\n";
             return MarketData{};
          }
 
-         condition = static_cast<char>( tok[0] );
+         condition = static_cast<char>( *token );
 
-         std::getline( ss, tok, ',' );
+         token = std::strtok( NULL, seperator.c_str() );
 
-         if ( ss.fail() )
+         if ( !token )
          {
             cerr << "Aborting! Error: Invalid time input skipping input\n";
             return MarketData{};
          }
 
-         time = std::stoul( tok );
+         time = std::stoul( std::string(token) );
 
-         std::getline( ss, tok, ',' );
+         token = std::strtok( NULL, seperator.c_str() );
 
-         if ( ss.fail() )
+         if ( !token )
          {
             cerr << "Aborting! Error: Invalid reptime input skipping input\n";
             return MarketData{};
          }
 
-         reptime = std::stoul( tok );
+         reptime = std::stoul( std::string(token) );
 
-         std::getline( ss, tok, ',' );
+         token = std::strtok( NULL, seperator.c_str() );
 
-         if ( ss.fail() )
+         if ( !token )
          {
             cerr << "Aborting! Error: Invalid price input skipping input\n";
             return MarketData{};
          }
 
-         price = tok;
+         price = std::string(token);
 
-         std::getline( ss, tok, ',' );
+         token = std::strtok( NULL, seperator.c_str() );
 
-         if ( ss.fail() )
+         if ( !token )
          {
             cerr << "Aborting! Error: Invalid size input skipping input\n";
             return MarketData{};
          }
 
-         size = std::stoul( tok );
+         size = std::stoul( std::string(token) );
       }
       catch ( ... )
       {
